@@ -2,10 +2,11 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 // レンダラープロセスに安全にAPIを公開する
 contextBridge.exposeInMainWorld('electronAPI', {
-  // 例: メインプロセスにメッセージを送る
-  // sendMessage: (channel, data) => ipcRenderer.send(channel, data),
-  // 例: メインプロセスからの応答を受け取る
-  // onMessage: (channel, callback) => ipcRenderer.on(channel, callback)
+  // マスタ操作API
+  loadMasters: () => ipcRenderer.invoke('master:load'),
+  addMaster: (code, name) => ipcRenderer.invoke('master:add', code, name),
+  updateMaster: (code, name) => ipcRenderer.invoke('master:update', code, name),
+  deleteMaster: (code) => ipcRenderer.invoke('master:delete', code)
 });
 
 // Node.jsとElectronのバージョン情報を公開
