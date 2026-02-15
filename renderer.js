@@ -19,6 +19,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // マスタ機能の初期化
   initMasterFeature();
+
+  // 検索機能の初期化
+  initSearchFeature();
 });
 
 // ========================================
@@ -169,4 +172,138 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+// ========================================
+// 検索機能
+// ========================================
+
+// デモ用データ（将来的にはNextEngine APIから取得）
+const demoData = [
+  { code: 'S001', name: '山田商店', address: '東京都渋谷区1-2-3', status: 'pending' },
+  { code: 'S002', name: '田中物産', address: '大阪府大阪市北区4-5-6', status: 'shipped' },
+  { code: 'S003', name: '鈴木電機', address: '愛知県名古屋市中区7-8-9', status: 'returned' },
+  { code: 'S004', name: '佐藤工業', address: '福岡県福岡市博多区10-11-12', status: 'pending' },
+  { code: 'S005', name: '高橋商事', address: '北海道札幌市中央区13-14-15', status: 'shipped' },
+  { code: 'S006', name: '伊藤製作所', address: '宮城県仙台市青葉区16-17-18', status: 'pending' },
+  { code: 'S007', name: '渡辺運輸', address: '広島県広島市中区19-20-21', status: 'returned' },
+  { code: 'S008', name: '中村食品', address: '京都府京都市中京区22-23-24', status: 'shipped' },
+];
+
+// ステータスの表示名
+const statusLabels = {
+  pending: '未発送',
+  shipped: '発送済み',
+  returned: '返品'
+};
+
+// ステータスのCSSクラス
+const statusClasses = {
+  pending: 'status-pending',
+  shipped: 'status-shipped',
+  returned: 'status-returned'
+};
+
+let currentSearchResults = [];
+
+function initSearchFeature() {
+  const btnSearch = document.getElementById('btn-search');
+  const btnCsvExport = document.getElementById('btn-csv-export');
+  const chkSelectAll = document.getElementById('chk-select-all');
+
+  // 検索ボタン
+  btnSearch.addEventListener('click', performSearch);
+
+  // CSV出力ボタン
+  btnCsvExport.addEventListener('click', exportCsv);
+
+  // 全選択チェックボックス
+  chkSelectAll.addEventListener('change', toggleSelectAll);
+
+  // 初期検索を実行
+  performSearch();
+}
+
+// 検索を実行
+function performSearch() {
+  const chkPending = document.getElementById('chk-pending').checked;
+  const chkShipped = document.getElementById('chk-shipped').checked;
+  const chkReturned = document.getElementById('chk-returned').checked;
+
+  // フィルタリング
+  currentSearchResults = demoData.filter(item => {
+    if (item.status === 'pending' && chkPending) return true;
+    if (item.status === 'shipped' && chkShipped) return true;
+    if (item.status === 'returned' && chkReturned) return true;
+    return false;
+  });
+
+  renderSearchResults(currentSearchResults);
+}
+
+// 検索結果を描画
+function renderSearchResults(results) {
+  const tbody = document.getElementById('search-result-body');
+  const chkSelectAll = document.getElementById('chk-select-all');
+
+  // 全選択チェックボックスをリセット
+  chkSelectAll.checked = false;
+
+  if (results.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">該当するデータがありません</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = results.map((item, index) => `
+    <tr>
+      <td><input type="checkbox" class="row-checkbox" data-index="${index}"></td>
+      <td>${index + 1}</td>
+      <td>${escapeHtml(item.code)}</td>
+      <td>${escapeHtml(item.name)}</td>
+      <td>${escapeHtml(item.address)}</td>
+      <td><span class="status-badge ${statusClasses[item.status]}">${statusLabels[item.status]}</span></td>
+    </tr>
+  `).join('');
+}
+
+// 全選択/全解除
+function toggleSelectAll() {
+  const chkSelectAll = document.getElementById('chk-select-all');
+  const checkboxes = document.querySelectorAll('.row-checkbox');
+
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = chkSelectAll.checked;
+  });
+}
+
+// CSV出力
+function exportCsv() {
+  const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+
+  if (checkboxes.length === 0) {
+    alert('出力する行を選択してください');
+    return;
+  }
+
+  // 選択された行のデータを取得
+  const selectedData = Array.from(checkboxes).map(checkbox => {
+    const index = parseInt(checkbox.dataset.index);
+    return currentSearchResults[index];
+  });
+
+  // CSV形式に変換
+  const headers = ['発送先コード', '発送先名', '住所', 'ステータス'];
+  const csvContent = [
+    headers.join(','),
+    ...selectedData.map(item => [
+      item.code,
+      item.name,
+      item.address,
+      statusLabels[item.status]
+    ].map(field => `"${field}"`).join(','))
+  ].join('\n');
+
+  // デモ：コンソールに出力（将来的にはファイル保存）
+  console.log('CSV出力:', csvContent);
+  alert(`${selectedData.length}件のデータをCSV出力しました（デモ）\n\n※実際のファイル保存は後で実装します`);
 }

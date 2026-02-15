@@ -214,6 +214,88 @@
       padding: 16px 20px;
       border-top: 1px solid #ddd;
     }
+
+    /* 検索条件セクション */
+    .search-section {
+      background-color: #f8f9fa;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .search-section h3 {
+      margin: 0 0 12px 0;
+      font-size: 14px;
+      color: #2c3e50;
+    }
+    .search-conditions {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .checkbox-label input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    /* 検索結果セクション */
+    .result-section {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+    .result-section h3 {
+      margin: 0 0 12px 0;
+      font-size: 14px;
+      color: #2c3e50;
+    }
+    .result-footer {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #ddd;
+    }
+    .btn-success {
+      background-color: #27ae60;
+      color: white;
+    }
+    .btn-success:hover {
+      background-color: #219a52;
+    }
+
+    /* ステータスバッジ */
+    .status-badge {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .status-pending {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+    .status-shipped {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .status-returned {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
   </style>
 </head>
 <body>
@@ -234,7 +316,51 @@
     <!-- 検索画面 -->
     <div id="search" class="tab-panel active">
       <h2>検索</h2>
-      <p>検索機能をここに実装します。</p>
+
+      <!-- 検索条件セクション -->
+      <div class="search-section">
+        <h3>検索条件</h3>
+        <div class="search-conditions">
+          <div class="checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="chk-pending" checked>
+              未発送
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="chk-shipped" checked>
+              発送済み
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="chk-returned">
+              返品
+            </label>
+          </div>
+          <button id="btn-search" class="btn btn-primary">検索</button>
+        </div>
+      </div>
+
+      <!-- 検索結果セクション -->
+      <div class="result-section">
+        <h3>検索結果</h3>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 40px;"><input type="checkbox" id="chk-select-all"></th>
+              <th style="width: 60px;">No.</th>
+              <th>発送先コード</th>
+              <th>発送先名</th>
+              <th>住所</th>
+              <th style="width: 100px;">ステータス</th>
+            </tr>
+          </thead>
+          <tbody id="search-result-body">
+            <!-- データはJSで動的に追加 -->
+          </tbody>
+        </table>
+        <div class="result-footer">
+          <button id="btn-csv-export" class="btn btn-success">CSV出力</button>
+        </div>
+      </div>
     </div>
 
     <!-- ログ出力画面 -->
