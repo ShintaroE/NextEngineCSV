@@ -2,9 +2,29 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
+// データフォルダのパスを取得
+function getDataDir() {
+  if (app.isPackaged) {
+    // ビルド後: exeと同じフォルダのdata/
+    return path.join(path.dirname(app.getPath('exe')), 'data');
+  } else {
+    // 開発時: プロジェクトフォルダのdata/
+    return path.join(__dirname, 'data');
+  }
+}
+
+// データフォルダを作成（存在しない場合）
+function ensureDataDir() {
+  const dataDir = getDataDir();
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+  return dataDir;
+}
+
 // データファイルのパス
 function getDataFilePath() {
-  return path.join(app.getPath('userData'), 'master-data.json');
+  return path.join(ensureDataDir(), 'master-data.json');
 }
 
 // マスタデータを読み込む
