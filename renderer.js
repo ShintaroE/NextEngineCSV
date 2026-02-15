@@ -180,14 +180,14 @@ function escapeHtml(text) {
 
 // デモ用データ（将来的にはNextEngine APIから取得）
 const demoData = [
-  { code: 'S001', name: '山田商店', address: '東京都渋谷区1-2-3', status: 'pending' },
-  { code: 'S002', name: '田中物産', address: '大阪府大阪市北区4-5-6', status: 'shipped' },
-  { code: 'S003', name: '鈴木電機', address: '愛知県名古屋市中区7-8-9', status: 'returned' },
-  { code: 'S004', name: '佐藤工業', address: '福岡県福岡市博多区10-11-12', status: 'pending' },
-  { code: 'S005', name: '高橋商事', address: '北海道札幌市中央区13-14-15', status: 'shipped' },
-  { code: 'S006', name: '伊藤製作所', address: '宮城県仙台市青葉区16-17-18', status: 'pending' },
-  { code: 'S007', name: '渡辺運輸', address: '広島県広島市中区19-20-21', status: 'returned' },
-  { code: 'S008', name: '中村食品', address: '京都府京都市中京区22-23-24', status: 'shipped' },
+  { slipNo: 'D-20240001', orderNo: 'R-10001', productCode: 'P001', productName: 'サンプル商品A', quantity: 2, shipCode: 'S001', shipName: '山田商店', address: '東京都渋谷区1-2-3', status: 'pending' },
+  { slipNo: 'D-20240002', orderNo: 'R-10002', productCode: 'P002', productName: 'サンプル商品B', quantity: 1, shipCode: 'S002', shipName: '田中物産', address: '大阪府大阪市北区4-5-6', status: 'shipped' },
+  { slipNo: 'D-20240003', orderNo: 'R-10003', productCode: 'P003', productName: 'サンプル商品C', quantity: 3, shipCode: 'S003', shipName: '鈴木電機', address: '愛知県名古屋市中区7-8-9', status: 'returned' },
+  { slipNo: 'D-20240004', orderNo: 'R-10004', productCode: 'P001', productName: 'サンプル商品A', quantity: 5, shipCode: 'S004', shipName: '佐藤工業', address: '福岡県福岡市博多区10-11-12', status: 'pending' },
+  { slipNo: 'D-20240005', orderNo: 'R-10005', productCode: 'P004', productName: 'サンプル商品D', quantity: 1, shipCode: 'S005', shipName: '高橋商事', address: '北海道札幌市中央区13-14-15', status: 'shipped' },
+  { slipNo: 'D-20240006', orderNo: 'R-10006', productCode: 'P002', productName: 'サンプル商品B', quantity: 2, shipCode: 'S006', shipName: '伊藤製作所', address: '宮城県仙台市青葉区16-17-18', status: 'pending' },
+  { slipNo: 'D-20240007', orderNo: 'R-10007', productCode: 'P005', productName: 'サンプル商品E', quantity: 4, shipCode: 'S007', shipName: '渡辺運輸', address: '広島県広島市中区19-20-21', status: 'returned' },
+  { slipNo: 'D-20240008', orderNo: 'R-10008', productCode: 'P003', productName: 'サンプル商品C', quantity: 1, shipCode: 'S008', shipName: '中村食品', address: '京都府京都市中京区22-23-24', status: 'shipped' },
 ];
 
 // ステータスの表示名
@@ -250,7 +250,7 @@ function renderSearchResults(results) {
   chkSelectAll.checked = false;
 
   if (results.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">該当するデータがありません</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; color: #999;">該当するデータがありません</td></tr>';
     return;
   }
 
@@ -258,8 +258,13 @@ function renderSearchResults(results) {
     <tr>
       <td><input type="checkbox" class="row-checkbox" data-index="${index}"></td>
       <td>${index + 1}</td>
-      <td>${escapeHtml(item.code)}</td>
-      <td>${escapeHtml(item.name)}</td>
+      <td>${escapeHtml(item.slipNo)}</td>
+      <td>${escapeHtml(item.orderNo)}</td>
+      <td>${escapeHtml(item.productCode)}</td>
+      <td>${escapeHtml(item.productName)}</td>
+      <td>${item.quantity}</td>
+      <td>${escapeHtml(item.shipCode)}</td>
+      <td>${escapeHtml(item.shipName)}</td>
       <td>${escapeHtml(item.address)}</td>
       <td><span class="status-badge ${statusClasses[item.status]}">${statusLabels[item.status]}</span></td>
     </tr>
@@ -292,12 +297,17 @@ function exportCsv() {
   });
 
   // CSV形式に変換
-  const headers = ['発送先コード', '発送先名', '住所', 'ステータス'];
+  const headers = ['伝票番号', '受注番号', '商品コード', '商品名', '個数', '発送先コード', '発送先名', '住所', 'ステータス'];
   const csvContent = [
     headers.join(','),
     ...selectedData.map(item => [
-      item.code,
-      item.name,
+      item.slipNo,
+      item.orderNo,
+      item.productCode,
+      item.productName,
+      item.quantity,
+      item.shipCode,
+      item.shipName,
       item.address,
       statusLabels[item.status]
     ].map(field => `"${field}"`).join(','))
