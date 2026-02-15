@@ -1,0 +1,28 @@
+{
+  "name": "nextenginecsv",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^26.7.0"
+  },
+  "build": {
+    "appId": "com.example.nextenginecsv",
+    "productName": "NextEngineCSV",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis"
+    }
+  }
+}
