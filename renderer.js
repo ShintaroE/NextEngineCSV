@@ -207,38 +207,33 @@ const statusClasses = {
 let currentSearchResults = [];
 
 function initSearchFeature() {
-  const btnSearch = document.getElementById('btn-search');
+  const btnSelectAll = document.getElementById('btn-select-all');
   const btnCsvExport = document.getElementById('btn-csv-export');
   const chkSelectAll = document.getElementById('chk-select-all');
 
-  // 検索ボタン
-  btnSearch.addEventListener('click', performSearch);
+  // 全選択ボタン（大きいボタン）
+  btnSelectAll.addEventListener('click', selectAll);
 
   // CSV出力ボタン
   btnCsvExport.addEventListener('click', exportCsv);
 
-  // 全選択チェックボックス
+  // 全選択チェックボックス（テーブルヘッダー）
   chkSelectAll.addEventListener('change', toggleSelectAll);
 
-  // 初期検索を実行
-  performSearch();
+  // 初期データを表示
+  currentSearchResults = demoData;
+  renderSearchResults(currentSearchResults);
 }
 
-// 検索を実行
-function performSearch() {
-  const chkPending = document.getElementById('chk-pending').checked;
-  const chkShipped = document.getElementById('chk-shipped').checked;
-  const chkReturned = document.getElementById('chk-returned').checked;
+// 全選択
+function selectAll() {
+  const chkSelectAll = document.getElementById('chk-select-all');
+  const checkboxes = document.querySelectorAll('.row-checkbox');
 
-  // フィルタリング
-  currentSearchResults = demoData.filter(item => {
-    if (item.status === 'pending' && chkPending) return true;
-    if (item.status === 'shipped' && chkShipped) return true;
-    if (item.status === 'returned' && chkReturned) return true;
-    return false;
+  chkSelectAll.checked = true;
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = true;
   });
-
-  renderSearchResults(currentSearchResults);
 }
 
 // 検索結果を描画

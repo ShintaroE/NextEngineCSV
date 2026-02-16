@@ -215,40 +215,24 @@
       border-top: 1px solid #ddd;
     }
 
-    /* 検索条件セクション */
-    .search-section {
-      background-color: #f8f9fa;
-      padding: 16px;
+    /* 大きなボタン */
+    .btn-large {
+      padding: 16px 48px;
+      font-size: 18px;
+      font-weight: 600;
       border-radius: 8px;
+    }
+    .action-header {
+      display: flex;
+      justify-content: center;
       margin-bottom: 20px;
     }
-    .search-section h3 {
-      margin: 0 0 12px 0;
-      font-size: 14px;
-      color: #2c3e50;
-    }
-    .search-conditions {
+    .action-footer {
       display: flex;
-      align-items: center;
-      gap: 20px;
-      flex-wrap: wrap;
-    }
-    .checkbox-group {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-    .checkbox-label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    .checkbox-label input[type="checkbox"] {
-      width: 16px;
-      height: 16px;
-      cursor: pointer;
+      justify-content: center;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #ddd;
     }
 
     /* 検索結果セクション */
@@ -317,31 +301,13 @@
     <div id="search" class="tab-panel active">
       <h2>検索</h2>
 
-      <!-- 検索条件セクション -->
-      <div class="search-section">
-        <h3>検索条件</h3>
-        <div class="search-conditions">
-          <div class="checkbox-group">
-            <label class="checkbox-label">
-              <input type="checkbox" id="chk-pending" checked>
-              未発送
-            </label>
-            <label class="checkbox-label">
-              <input type="checkbox" id="chk-shipped" checked>
-              発送済み
-            </label>
-            <label class="checkbox-label">
-              <input type="checkbox" id="chk-returned">
-              返品
-            </label>
-          </div>
-          <button id="btn-search" class="btn btn-primary">検索</button>
-        </div>
+      <!-- 全選択ボタン（上部中央） -->
+      <div class="action-header">
+        <button id="btn-select-all" class="btn btn-primary btn-large">全選択</button>
       </div>
 
-      <!-- 検索結果セクション -->
+      <!-- 検索結果テーブル -->
       <div class="result-section">
-        <h3>検索結果</h3>
         <table class="data-table">
           <thead>
             <tr>
@@ -362,9 +328,11 @@
             <!-- データはJSで動的に追加 -->
           </tbody>
         </table>
-        <div class="result-footer">
-          <button id="btn-csv-export" class="btn btn-success">CSV出力</button>
-        </div>
+      </div>
+
+      <!-- CSV出力ボタン（下部中央） -->
+      <div class="action-footer">
+        <button id="btn-csv-export" class="btn btn-success btn-large">CSV出力</button>
       </div>
     </div>
 
