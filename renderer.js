@@ -180,10 +180,14 @@ function escapeHtml(text) {
 
 let currentSearchResults = [];
 
-async function initSearchFeature() {
+function initSearchFeature() {
+  const btnSearch = document.getElementById('btn-search');
   const btnSelectAll = document.getElementById('btn-select-all');
   const btnCsvExport = document.getElementById('btn-csv-export');
   const chkSelectAll = document.getElementById('chk-select-all');
+
+  // 検索ボタン
+  btnSearch.addEventListener('click', searchOrders);
 
   // 全選択ボタン（大きいボタン）
   btnSelectAll.addEventListener('click', selectAll);
@@ -194,7 +198,12 @@ async function initSearchFeature() {
   // 全選択チェックボックス（テーブルヘッダー）
   chkSelectAll.addEventListener('change', toggleSelectAll);
 
-  // データをファイルから読み込み
+  // 初期状態：テーブルは空
+  renderSearchResults([]);
+}
+
+// 検索実行
+async function searchOrders() {
   const data = await window.electronAPI.loadOrders();
   currentSearchResults = data.orders || [];
   renderSearchResults(currentSearchResults);
