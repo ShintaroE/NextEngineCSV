@@ -261,8 +261,26 @@ function toggleSelectAll() {
   });
 }
 
+// 住所を指定文字数で分割する関数
+function splitAddress(address, maxLength = 20) {
+  const lines = [];
+  let remaining = address;
+
+  while (remaining.length > 0) {
+    lines.push(remaining.substring(0, maxLength));
+    remaining = remaining.substring(maxLength);
+  }
+
+  // 4行分を確保（足りない分は空文字）
+  while (lines.length < 4) {
+    lines.push('');
+  }
+
+  return lines.slice(0, 4); // 最大4行まで
+}
+
 // CSV出力
-function exportCsv() {
+async function exportCsv() {
   const checkboxes = document.querySelectorAll('.row-checkbox:checked');
 
   if (checkboxes.length === 0) {
@@ -276,23 +294,33 @@ function exportCsv() {
     return currentSearchResults[index];
   });
 
-  // CSV形式に変換
-  const headers = ['伝票番号', '商品コード', '商品名', '個数', '発送先コード', '発送先名', '郵便番号', '住所'];
-  const csvContent = [
-    headers.join(','),
-    ...selectedData.map(item => [
-      item.slipNo,
-      item.productCode,
-      item.productName,
-      item.quantity,
-      item.shipCode,
-      item.shipName,
-      item.postalCode,
-      item.address
-    ].map(field => `"${field}"`).join(','))
-  ].join('\n');
+  // クリックポスト形式のCSVを生成
+  const headers = ['お届け先郵便番号', 'お届け先氏名', 'お届け先敬称', 'お届け先住所1行目', 'お届け先住所2行目', 'お届け先住所3行目', 'お届け先住所4行目', '内容品'];
 
-  // デモ：コンソールに出力（将来的にはファイル保存）
-  console.log('CSV出力:', csvContent);
-  alert(`${selectedData.length}件のデータをCSV出力しました（デモ）\n\n※実際のファイル保存は後で実装します`);
+  const rows = selectedData.map(item => {
+    const addressLines = splitAddress(item.address, 20);
+    return [
+      item.postalCode,
+      item.shipName,
+      '様',
+      addressLines[0],
+      addressLines[1],
+      addressLines[2],
+      addressLines[3],
+      item.productName
+    ].map(field => `"${field}"`).join(',');
+  });
+
+  const csvContent = [headers.join(','), ...rows].join('\n');
+
+  // メインプロセスでファイル保存
+  const result = await window.electronAPI.saveCsv(csvContent);
+
+  if (result.success) {
+    alert(`${selectedData.length}件のデータをCSV出力しました\n\n保存先: ${result.filePath}`);
+  } else if (result.canceled) {
+    // キャンセルされた場合は何もしない
+  } else {
+    alert('CSV保存に失敗しました: ' + (result.error || '不明なエラー'));
+  }
 }

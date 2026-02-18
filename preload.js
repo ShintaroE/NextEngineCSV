@@ -6,7 +6,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadMasters: () => ipcRenderer.invoke('master:load'),
   addMaster: (code, name) => ipcRenderer.invoke('master:add', code, name),
   updateMaster: (code, name) => ipcRenderer.invoke('master:update', code, name),
-  deleteMaster: (code) => ipcRenderer.invoke('master:delete', code)
+  deleteMaster: (code) => ipcRenderer.invoke('master:delete', code),
+  // CSV操作API
+  saveCsv: (csvContent) => ipcRenderer.invoke('csv:save', csvContent)
 });
 
 // Node.jsとElectronのバージョン情報を公開

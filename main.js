@@ -1,6 +1,7 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const iconv = require('iconv-lite');
 
 // データフォルダのパスを取得
 function getDataDir() {
@@ -119,6 +120,33 @@ app.whenReady().then(() => {
       createWindow();
     }
   });
+});
+
+// IPC ハンドラー: CSVを保存
+ipcMain.handle('csv:save', async (event, csvContent) => {
+  try {
+    // ファイル保存ダイアログを表示
+    const result = await dialog.showSaveDialog({
+      title: 'CSVファイルを保存',
+      defaultPath: 'clickpost.csv',
+      filters: [
+        { name: 'CSVファイル', extensions: ['csv'] }
+      ]
+    });
+
+    if (result.canceled || !result.filePath) {
+      return { success: false, canceled: true };
+    }
+
+    // Shift-JISに変換して保存
+    const sjisBuffer = iconv.encode(csvContent, 'Shift_JIS');
+    fs.writeFileSync(result.filePath, sjisBuffer);
+
+    return { success: true, filePath: result.filePath };
+  } catch (error) {
+    console.error('CSV保存エラー:', error);
+    return { success: false, error: error.message };
+  }
 });
 
 // 全ウィンドウが閉じられたらアプリを終了（macOS以外）

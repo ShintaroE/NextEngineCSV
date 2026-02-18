@@ -24,5 +24,8 @@
     "win": {
       "target": "nsis"
     }
+  },
+  "dependencies": {
+    "iconv-lite": "^0.7.2"
   }
 }
