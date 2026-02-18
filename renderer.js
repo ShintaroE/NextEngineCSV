@@ -283,33 +283,42 @@ async function exportCsv() {
     return currentSearchResults[index];
   });
 
-  // クリックポスト形式のCSVを生成（重複カラム追加）
+  // 1. 全行を展開（個数分だけ複製）
+  const expandedRows = [];
+  selectedData.forEach(item => {
+    const quantity = item.quantity || 1;
+    for (let i = 0; i < quantity; i++) {
+      expandedRows.push({ ...item });
+    }
+  });
+
+  // 2. お届け先氏名でソート
+  expandedRows.sort((a, b) => a.shipName.localeCompare(b.shipName, 'ja'));
+
+  // 3. 同じお届け先氏名の出現回数をカウント
+  const nameCount = {};
+  expandedRows.forEach(row => {
+    nameCount[row.shipName] = (nameCount[row.shipName] || 0) + 1;
+  });
+
+  // 4. CSV行を生成（出現回数2以上なら◎をつける）
   const headers = ['お届け先郵便番号', 'お届け先氏名', 'お届け先敬称', 'お届け先住所1行目', 'お届け先住所2行目', 'お届け先住所3行目', 'お届け先住所4行目', '内容品', '重複'];
 
-  // 個数に応じて行を複製
-  const rows = [];
-  let totalRows = 0;
-  selectedData.forEach(item => {
+  const rows = expandedRows.map(item => {
     const addressLines = splitAddress(item.address, 20);
-    const quantity = item.quantity || 1;
-    const isDuplicate = quantity >= 2;
+    const isDuplicate = nameCount[item.shipName] >= 2;
 
-    // 個数分だけ行を複製
-    for (let i = 0; i < quantity; i++) {
-      const row = [
-        item.postalCode,
-        item.shipName,
-        '様',
-        addressLines[0],
-        addressLines[1],
-        addressLines[2],
-        addressLines[3],
-        item.productName,
-        isDuplicate ? '◎' : ''
-      ].map(field => `"${field}"`).join(',');
-      rows.push(row);
-      totalRows++;
-    }
+    return [
+      item.postalCode,
+      item.shipName,
+      '様',
+      addressLines[0],
+      addressLines[1],
+      addressLines[2],
+      addressLines[3],
+      item.productName,
+      isDuplicate ? '◎' : ''
+    ].map(field => `"${field}"`).join(',');
   });
 
   const csvContent = [headers.join(','), ...rows].join('\n');
@@ -318,7 +327,7 @@ async function exportCsv() {
   const result = await window.electronAPI.saveCsv(csvContent);
 
   if (result.success) {
-    alert(`${totalRows}件のデータをCSV出力しました（元データ: ${selectedData.length}件）\n\n保存先: ${result.filePath}`);
+    alert(`${expandedRows.length}件のデータをCSV出力しました（元データ: ${selectedData.length}件）\n\n保存先: ${result.filePath}`);
   } else if (result.canceled) {
     // キャンセルされた場合は何もしない
   } else {
