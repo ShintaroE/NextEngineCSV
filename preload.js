@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   addMaster: (code, name) => ipcRenderer.invoke('master:add', code, name),
   updateMaster: (code, name) => ipcRenderer.invoke('master:update', code, name),
   deleteMaster: (code) => ipcRenderer.invoke('master:delete', code),
+  // データ操作API
+  loadOrders: () => ipcRenderer.invoke('data:loadOrders'),
   // CSV操作API
   saveCsv: (csvContent) => ipcRenderer.invoke('csv:save', csvContent)
 });

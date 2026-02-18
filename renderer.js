@@ -178,21 +178,9 @@ function escapeHtml(text) {
 // 検索機能
 // ========================================
 
-// デモ用データ（将来的にはNextEngine APIから取得）
-const demoData = [
-  { slipNo: 'D-20240001', productCode: 'P001', productName: 'サンプル商品A', quantity: 2, shipCode: 'S001', shipName: '山田商店', postalCode: '150-0001', address: '東京都渋谷区1-2-3' },
-  { slipNo: 'D-20240002', productCode: 'P002', productName: 'サンプル商品B', quantity: 1, shipCode: 'S002', shipName: '田中物産', postalCode: '530-0001', address: '大阪府大阪市北区4-5-6' },
-  { slipNo: 'D-20240003', productCode: 'P003', productName: 'サンプル商品C', quantity: 3, shipCode: 'S003', shipName: '鈴木電機', postalCode: '460-0001', address: '愛知県名古屋市中区7-8-9' },
-  { slipNo: 'D-20240004', productCode: 'P001', productName: 'サンプル商品A', quantity: 5, shipCode: 'S004', shipName: '佐藤工業', postalCode: '812-0001', address: '福岡県福岡市博多区10-11-12' },
-  { slipNo: 'D-20240005', productCode: 'P004', productName: 'サンプル商品D', quantity: 1, shipCode: 'S005', shipName: '高橋商事', postalCode: '060-0001', address: '北海道札幌市中央区13-14-15' },
-  { slipNo: 'D-20240006', productCode: 'P002', productName: 'サンプル商品B', quantity: 2, shipCode: 'S006', shipName: '伊藤製作所', postalCode: '980-0001', address: '宮城県仙台市青葉区16-17-18' },
-  { slipNo: 'D-20240007', productCode: 'P005', productName: 'サンプル商品E', quantity: 4, shipCode: 'S007', shipName: '渡辺運輸', postalCode: '730-0001', address: '広島県広島市中区19-20-21' },
-  { slipNo: 'D-20240008', productCode: 'P003', productName: 'サンプル商品C', quantity: 1, shipCode: 'S008', shipName: '中村食品', postalCode: '604-0001', address: '京都府京都市中京区22-23-24' },
-];
-
 let currentSearchResults = [];
 
-function initSearchFeature() {
+async function initSearchFeature() {
   const btnSelectAll = document.getElementById('btn-select-all');
   const btnCsvExport = document.getElementById('btn-csv-export');
   const chkSelectAll = document.getElementById('chk-select-all');
@@ -206,8 +194,9 @@ function initSearchFeature() {
   // 全選択チェックボックス（テーブルヘッダー）
   chkSelectAll.addEventListener('change', toggleSelectAll);
 
-  // 初期データを表示
-  currentSearchResults = demoData;
+  // データをファイルから読み込み
+  const data = await window.electronAPI.loadOrders();
+  currentSearchResults = data.orders || [];
   renderSearchResults(currentSearchResults);
 }
 
@@ -294,21 +283,33 @@ async function exportCsv() {
     return currentSearchResults[index];
   });
 
-  // クリックポスト形式のCSVを生成
-  const headers = ['お届け先郵便番号', 'お届け先氏名', 'お届け先敬称', 'お届け先住所1行目', 'お届け先住所2行目', 'お届け先住所3行目', 'お届け先住所4行目', '内容品'];
+  // クリックポスト形式のCSVを生成（重複カラム追加）
+  const headers = ['お届け先郵便番号', 'お届け先氏名', 'お届け先敬称', 'お届け先住所1行目', 'お届け先住所2行目', 'お届け先住所3行目', 'お届け先住所4行目', '内容品', '重複'];
 
-  const rows = selectedData.map(item => {
+  // 個数に応じて行を複製
+  const rows = [];
+  let totalRows = 0;
+  selectedData.forEach(item => {
     const addressLines = splitAddress(item.address, 20);
-    return [
-      item.postalCode,
-      item.shipName,
-      '様',
-      addressLines[0],
-      addressLines[1],
-      addressLines[2],
-      addressLines[3],
-      item.productName
-    ].map(field => `"${field}"`).join(',');
+    const quantity = item.quantity || 1;
+    const isDuplicate = quantity >= 2;
+
+    // 個数分だけ行を複製
+    for (let i = 0; i < quantity; i++) {
+      const row = [
+        item.postalCode,
+        item.shipName,
+        '様',
+        addressLines[0],
+        addressLines[1],
+        addressLines[2],
+        addressLines[3],
+        item.productName,
+        isDuplicate ? '◎' : ''
+      ].map(field => `"${field}"`).join(',');
+      rows.push(row);
+      totalRows++;
+    }
   });
 
   const csvContent = [headers.join(','), ...rows].join('\n');
@@ -317,7 +318,7 @@ async function exportCsv() {
   const result = await window.electronAPI.saveCsv(csvContent);
 
   if (result.success) {
-    alert(`${selectedData.length}件のデータをCSV出力しました\n\n保存先: ${result.filePath}`);
+    alert(`${totalRows}件のデータをCSV出力しました（元データ: ${selectedData.length}件）\n\n保存先: ${result.filePath}`);
   } else if (result.canceled) {
     // キャンセルされた場合は何もしない
   } else {

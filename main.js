@@ -110,6 +110,20 @@ ipcMain.handle('master:delete', (event, code) => {
   return { success, data: success ? data : null };
 });
 
+// IPC ハンドラー: 注文データを読み込む
+ipcMain.handle('data:loadOrders', () => {
+  const filePath = path.join(ensureDataDir(), 'demo-data.json');
+  try {
+    if (fs.existsSync(filePath)) {
+      const data = fs.readFileSync(filePath, 'utf-8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('注文データ読み込みエラー:', error);
+  }
+  return { orders: [] };
+});
+
 // Electronの初期化が完了したらウィンドウを作成
 app.whenReady().then(() => {
   createWindow();
