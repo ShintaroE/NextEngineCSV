@@ -22,6 +22,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 検索機能の初期化
   initSearchFeature();
+
+  // 認証機能の初期化
+  initAuthFeature();
 });
 
 // ========================================
@@ -341,5 +344,65 @@ async function exportCsv() {
     // キャンセルされた場合は何もしない
   } else {
     alert('CSV保存に失敗しました: ' + (result.error || '不明なエラー'));
+  }
+}
+
+// ========================================
+// 認証機能
+// ========================================
+
+async function initAuthFeature() {
+  const btnSaveAuth = document.getElementById('btn-save-auth');
+
+  // 保存ボタン
+  btnSaveAuth.addEventListener('click', saveAuth);
+
+  // 初期データ読み込み
+  await loadAuth();
+}
+
+// 認証情報を読み込む
+async function loadAuth() {
+  const auth = await window.electronAPI.loadAuth();
+
+  document.getElementById('auth-client-id').value = auth.client_id || '';
+  document.getElementById('auth-client-secret').value = auth.client_secret || '';
+  document.getElementById('auth-access-token').value = auth.access_token || '';
+  document.getElementById('auth-refresh-token').value = auth.refresh_token || '';
+
+  // 認証状態を更新
+  updateAuthStatus();
+}
+
+// 認証情報を保存
+async function saveAuth() {
+  const authData = {
+    client_id: document.getElementById('auth-client-id').value.trim(),
+    client_secret: document.getElementById('auth-client-secret').value.trim(),
+    access_token: document.getElementById('auth-access-token').value.trim(),
+    refresh_token: document.getElementById('auth-refresh-token').value.trim()
+  };
+
+  const result = await window.electronAPI.saveAuth(authData);
+
+  if (result.success) {
+    alert('認証情報を保存しました');
+    updateAuthStatus();
+  } else {
+    alert('認証情報の保存に失敗しました');
+  }
+}
+
+// 認証状態を更新
+async function updateAuthStatus() {
+  const status = await window.electronAPI.getAuthStatus();
+  const statusElement = document.getElementById('auth-status');
+
+  if (status.status === 'configured') {
+    statusElement.textContent = '認証状態: ● 設定済み';
+    statusElement.style.color = '#27ae60';
+  } else {
+    statusElement.textContent = '認証状態: ○ 未設定';
+    statusElement.style.color = '#e74c3c';
   }
 }
