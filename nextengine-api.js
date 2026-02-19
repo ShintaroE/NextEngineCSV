@@ -158,11 +158,15 @@ async function searchOrders(conditions = {}) {
 }
 
 /**
- * 受注明細検索
- * @param {string|number} orderId - 伝票番号
+ * 受注明細検索（複数伝票ID対応）
+ * @param {Array<string|number>} orderIds - 伝票番号の配列
  * @returns {Array} 受注明細リスト
  */
-async function searchOrderRows(orderId) {
+async function searchOrderRows(orderIds) {
+  if (!orderIds || orderIds.length === 0) {
+    return [];
+  }
+
   const fields = [
     'receive_order_row_receive_order_id',
     'receive_order_row_no',
@@ -174,7 +178,7 @@ async function searchOrderRows(orderId) {
 
   const params = {
     fields: fields,
-    'receive_order_row_receive_order_id-eq': orderId
+    'receive_order_row_receive_order_id-in': orderIds.join(',')
   };
 
   const result = await callApi('/api_v1_receiveorder_row/search', params);
@@ -182,19 +186,39 @@ async function searchOrderRows(orderId) {
 }
 
 /**
- * 受注伝票と明細を結合して取得
+ * 受注伝票と明細を結合して取得（最適化版：2回のAPI呼び出し）
  * @param {Object} conditions - 検索条件
  * @returns {Array} アプリ用データ形式に変換された受注リスト
  */
 async function fetchOrdersWithDetails(conditions = {}) {
-  // 1. 受注伝票を検索
+  // 1. 受注伝票を検索（1回目のAPI呼び出し）
   const orders = await searchOrders(conditions);
 
-  // 2. 各伝票の明細を取得
+  if (orders.length === 0) {
+    return [];
+  }
+
+  // 2. 全伝票IDを収集
+  const orderIds = orders.map(order => order.receive_order_id);
+
+  // 3. 全明細を一括取得（2回目のAPI呼び出し）
+  const allRows = await searchOrderRows(orderIds);
+
+  // 4. 明細を伝票IDでグループ化
+  const rowsByOrderId = {};
+  for (const row of allRows) {
+    const orderId = row.receive_order_row_receive_order_id;
+    if (!rowsByOrderId[orderId]) {
+      rowsByOrderId[orderId] = [];
+    }
+    rowsByOrderId[orderId].push(row);
+  }
+
+  // 5. 伝票と明細を結合してアプリ用形式に変換
   const results = [];
 
   for (const order of orders) {
-    const rows = await searchOrderRows(order.receive_order_id);
+    const rows = rowsByOrderId[order.receive_order_id] || [];
 
     // 明細ごとに1行として出力（明細がない場合は伝票情報のみ）
     if (rows.length === 0) {
