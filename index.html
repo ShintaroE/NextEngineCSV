@@ -336,6 +336,7 @@
     <li class="active" data-tab="search">検索</li>
     <li data-tab="log">ログ出力</li>
     <li data-tab="master">マスタ設定</li>
+    <li data-tab="auth">認証</li>
   </ul>
 
   <!-- タブコンテンツ -->
@@ -401,6 +402,36 @@
           <!-- データはJSで動的に追加 -->
         </tbody>
       </table>
+    </div>
+
+    <!-- 認証画面 -->
+    <div id="auth" class="tab-panel">
+      <h2>認証設定</h2>
+      <p style="color: #666; margin-bottom: 20px;">ネクストエンジンAPIの認証情報を設定してください。</p>
+
+      <div class="auth-form" style="max-width: 500px;">
+        <div class="form-group">
+          <label for="auth-client-id">client_id</label>
+          <input type="text" id="auth-client-id" placeholder="アプリ登録時に発行されたclient_id">
+        </div>
+        <div class="form-group">
+          <label for="auth-client-secret">client_secret</label>
+          <input type="password" id="auth-client-secret" placeholder="アプリ登録時に発行されたclient_secret">
+        </div>
+        <div class="form-group">
+          <label for="auth-access-token">access_token</label>
+          <input type="text" id="auth-access-token" placeholder="認証後に取得したaccess_token">
+        </div>
+        <div class="form-group">
+          <label for="auth-refresh-token">refresh_token</label>
+          <input type="text" id="auth-refresh-token" placeholder="認証後に取得したrefresh_token">
+        </div>
+
+        <div style="margin-top: 24px; display: flex; align-items: center; gap: 16px;">
+          <button id="btn-save-auth" class="btn btn-primary">保存</button>
+          <span id="auth-status" style="font-size: 14px; color: #666;">認証状態: 未設定</span>
+        </div>
+      </div>
     </div>
   </div>
 

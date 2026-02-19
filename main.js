@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const iconv = require('iconv-lite');
+const nextengineApi = require('./nextengine-api');
 
 // データフォルダのパスを取得
 function getDataDir() {
@@ -124,8 +125,42 @@ ipcMain.handle('data:loadOrders', () => {
   return { orders: [] };
 });
 
+// ========================================
+// 認証関連 IPC ハンドラー
+// ========================================
+
+// IPC ハンドラー: 認証情報を読み込む
+ipcMain.handle('auth:load', () => {
+  return nextengineApi.loadAuthData();
+});
+
+// IPC ハンドラー: 認証情報を保存
+ipcMain.handle('auth:save', (event, authData) => {
+  const success = nextengineApi.saveAuthData(authData);
+  return { success };
+});
+
+// IPC ハンドラー: 認証状態を取得
+ipcMain.handle('auth:status', () => {
+  return nextengineApi.getAuthStatus();
+});
+
+// IPC ハンドラー: ネクストエンジンAPIで注文検索
+ipcMain.handle('ne:searchOrders', async (event, conditions) => {
+  try {
+    const orders = await nextengineApi.fetchOrdersWithDetails(conditions);
+    return { success: true, orders };
+  } catch (error) {
+    console.error('注文検索エラー:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Electronの初期化が完了したらウィンドウを作成
 app.whenReady().then(() => {
+  // NextEngine APIを初期化
+  nextengineApi.init(ensureDataDir);
+
   createWindow();
 
   // macOS: ドックアイコンクリック時にウィンドウがなければ作成

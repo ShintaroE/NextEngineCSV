@@ -10,7 +10,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // データ操作API
   loadOrders: () => ipcRenderer.invoke('data:loadOrders'),
   // CSV操作API
-  saveCsv: (csvContent) => ipcRenderer.invoke('csv:save', csvContent)
+  saveCsv: (csvContent) => ipcRenderer.invoke('csv:save', csvContent),
+  // 認証API
+  loadAuth: () => ipcRenderer.invoke('auth:load'),
+  saveAuth: (authData) => ipcRenderer.invoke('auth:save', authData),
+  getAuthStatus: () => ipcRenderer.invoke('auth:status'),
+  // ネクストエンジンAPI
+  neSearchOrders: (conditions) => ipcRenderer.invoke('ne:searchOrders', conditions)
 });
 
 // Node.jsとElectronのバージョン情報を公開
