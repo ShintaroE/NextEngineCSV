@@ -210,9 +210,29 @@ function initSearchFeature() {
 
 // 検索実行
 async function searchOrders() {
-  const data = await window.electronAPI.loadOrders();
-  currentSearchResults = data.orders || [];
-  renderSearchResults(currentSearchResults);
+  const btnSearch = document.getElementById('btn-search');
+  btnSearch.disabled = true;
+  btnSearch.textContent = '検索中...';
+
+  try {
+    const result = await window.electronAPI.neSearchOrders({});
+
+    if (result.success) {
+      currentSearchResults = result.orders || [];
+      renderSearchResults(currentSearchResults);
+    } else {
+      alert('検索に失敗しました: ' + (result.error || '不明なエラー'));
+      currentSearchResults = [];
+      renderSearchResults([]);
+    }
+  } catch (error) {
+    alert('検索エラー: ' + error.message);
+    currentSearchResults = [];
+    renderSearchResults([]);
+  } finally {
+    btnSearch.disabled = false;
+    btnSearch.textContent = '検索';
+  }
 }
 
 // 全選択
