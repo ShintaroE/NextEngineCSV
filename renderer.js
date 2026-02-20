@@ -388,6 +388,8 @@ async function startOAuth() {
     if (result.success) {
       alert('認証が完了しました');
       await loadAuth(); // トークン情報を再読み込み
+    } else if (result.canceled) {
+      // キャンセルされた場合は何も表示しない
     } else {
       alert('認証に失敗しました: ' + (result.error || '不明なエラー'));
     }

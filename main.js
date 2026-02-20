@@ -172,6 +172,9 @@ ipcMain.handle('auth:startOAuth', async (event, clientId, clientSecret) => {
         const state = url.searchParams.get('state');
 
         if (uid && state) {
+          // 認証完了フラグを立てる
+          authCompleted = true;
+
           // リダイレクトをキャンセル
           callback({ cancel: true });
 
@@ -197,10 +200,18 @@ ipcMain.handle('auth:startOAuth', async (event, clientId, clientSecret) => {
       }
     });
 
+    // 認証完了フラグ
+    let authCompleted = false;
+
     // ウィンドウが閉じられた場合
     authWindow.on('closed', () => {
       // フィルタを解除
       session.defaultSession.webRequest.onBeforeRequest(filter, null);
+
+      // 認証が完了していない場合はキャンセルとして処理
+      if (!authCompleted) {
+        resolve({ success: false, canceled: true, error: '認証がキャンセルされました' });
+      }
     });
 
     // ログインURLを開く
