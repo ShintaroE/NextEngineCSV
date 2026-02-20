@@ -14,6 +14,59 @@ const API_HOST = 'https://api.next-engine.org';
 // データフォルダのパスを取得する関数（main.jsから渡される）
 let getDataDirFunc = null;
 
+// ログ管理（メモリ保持、最大100件）
+const MAX_LOG_COUNT = 100;
+let apiLogs = [];
+
+/**
+ * エンドポイント名を日本語に変換
+ */
+function getEndpointName(endpoint) {
+  const names = {
+    '/api_v1_receiveorder_base/search': '受注伝票検索',
+    '/api_v1_receiveorder_base/count': '受注伝票件数',
+    '/api_v1_receiveorder_row/search': '受注明細検索'
+  };
+  return names[endpoint] || endpoint;
+}
+
+/**
+ * ログを追加
+ */
+function addLog(level, endpoint, message, details = null) {
+  const logEntry = {
+    timestamp: new Date().toISOString(),
+    level: level,
+    endpoint: endpoint,
+    endpointName: getEndpointName(endpoint),
+    message: message,
+    details: details
+  };
+
+  apiLogs.push(logEntry);
+
+  // 最大件数を超えたら古いログを削除
+  if (apiLogs.length > MAX_LOG_COUNT) {
+    apiLogs = apiLogs.slice(-MAX_LOG_COUNT);
+  }
+
+  return logEntry;
+}
+
+/**
+ * ログを取得
+ */
+function getLogs() {
+  return [...apiLogs];
+}
+
+/**
+ * ログをクリア
+ */
+function clearLogs() {
+  apiLogs = [];
+}
+
 /**
  * 初期化：データフォルダ取得関数を設定
  */
@@ -119,11 +172,21 @@ async function callApi(endpoint, params = {}) {
 
     // エラーチェック
     if (result.result !== 'success') {
-      throw new Error(`API Error: ${result.code} - ${result.message || 'Unknown error'}`);
+      const errorMsg = `${result.code} - ${result.message || 'Unknown error'}`;
+      addLog('error', endpoint, errorMsg);
+      throw new Error(`API Error: ${errorMsg}`);
     }
+
+    // 成功ログ
+    const count = result.count || (result.data ? result.data.length : 0);
+    addLog('success', endpoint, `${count}件取得`);
 
     return result;
   } catch (error) {
+    // ネットワークエラー等の場合
+    if (!error.message.startsWith('API Error:')) {
+      addLog('error', endpoint, error.message);
+    }
     console.error('API呼び出しエラー:', error);
     throw error;
   }
@@ -262,5 +325,7 @@ module.exports = {
   callApi,
   searchOrders,
   searchOrderRows,
-  fetchOrdersWithDetails
+  fetchOrdersWithDetails,
+  getLogs,
+  clearLogs
 };

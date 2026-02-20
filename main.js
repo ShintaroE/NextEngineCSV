@@ -156,6 +156,21 @@ ipcMain.handle('ne:searchOrders', async (event, conditions) => {
   }
 });
 
+// ========================================
+// ログ関連 IPC ハンドラー
+// ========================================
+
+// IPC ハンドラー: ログを取得
+ipcMain.handle('log:get', () => {
+  return nextengineApi.getLogs();
+});
+
+// IPC ハンドラー: ログをクリア
+ipcMain.handle('log:clear', () => {
+  nextengineApi.clearLogs();
+  return { success: true };
+});
+
 // Electronの初期化が完了したらウィンドウを作成
 app.whenReady().then(() => {
   // NextEngine APIを初期化

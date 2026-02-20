@@ -383,7 +383,25 @@
     <!-- ログ出力画面 -->
     <div id="log" class="tab-panel">
       <h2>ログ出力</h2>
-      <p>ログ出力機能をここに実装します。</p>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <button id="btn-clear-log" class="btn btn-secondary">クリア</button>
+        <span id="log-count" style="color: #666;">件数: 0件</span>
+      </div>
+      <div id="log-container" style="max-height: 400px; overflow-y: auto;">
+        <table class="data-table" id="log-table">
+          <thead>
+            <tr>
+              <th style="width: 100px;">時刻</th>
+              <th style="width: 80px;">結果</th>
+              <th style="width: 150px;">API</th>
+              <th>メッセージ</th>
+            </tr>
+          </thead>
+          <tbody id="log-content">
+            <!-- ログはJSで動的に追加 -->
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- マスタ設定画面 -->

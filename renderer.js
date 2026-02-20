@@ -25,6 +25,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 認証機能の初期化
   initAuthFeature();
+
+  // ログ機能の初期化
+  initLogFeature();
 });
 
 // ========================================
@@ -405,4 +408,92 @@ async function updateAuthStatus() {
     statusElement.textContent = '認証状態: ○ 未設定';
     statusElement.style.color = '#e74c3c';
   }
+}
+
+// ========================================
+// ログ機能
+// ========================================
+
+let logRefreshInterval = null;
+
+function initLogFeature() {
+  const btnClearLog = document.getElementById('btn-clear-log');
+
+  // クリアボタン
+  btnClearLog.addEventListener('click', clearLogs);
+
+  // ログタブが表示されたときに更新を開始
+  const tabNavItems = document.querySelectorAll('.tab-nav li');
+  tabNavItems.forEach(item => {
+    item.addEventListener('click', () => {
+      if (item.dataset.tab === 'log') {
+        startLogRefresh();
+      } else {
+        stopLogRefresh();
+      }
+    });
+  });
+}
+
+// ログの定期更新を開始
+function startLogRefresh() {
+  // 即座に更新
+  refreshLogs();
+
+  // 2秒ごとに更新
+  if (!logRefreshInterval) {
+    logRefreshInterval = setInterval(refreshLogs, 2000);
+  }
+}
+
+// ログの定期更新を停止
+function stopLogRefresh() {
+  if (logRefreshInterval) {
+    clearInterval(logRefreshInterval);
+    logRefreshInterval = null;
+  }
+}
+
+// ログを更新
+async function refreshLogs() {
+  const logs = await window.electronAPI.getLogs();
+  renderLogs(logs);
+}
+
+// ログを描画
+function renderLogs(logs) {
+  const logContent = document.getElementById('log-content');
+  const logCount = document.getElementById('log-count');
+  const logContainer = document.getElementById('log-container');
+
+  logCount.textContent = `件数: ${logs.length}件`;
+
+  if (logs.length === 0) {
+    logContent.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999;">ログはありません</td></tr>';
+    return;
+  }
+
+  const html = logs.map(log => {
+    const time = new Date(log.timestamp).toLocaleTimeString('ja-JP');
+    const levelClass = log.level === 'success' ? 'status-shipped' : log.level === 'error' ? 'status-returned' : 'status-pending';
+    const levelText = log.level === 'success' ? '成功' : log.level === 'error' ? '失敗' : '情報';
+
+    return `<tr>` +
+      `<td>${time}</td>` +
+      `<td><span class="status-badge ${levelClass}">${levelText}</span></td>` +
+      `<td>${escapeHtml(log.endpointName)}</td>` +
+      `<td>${escapeHtml(log.message)}</td>` +
+      `</tr>`;
+  }).join('');
+
+  logContent.innerHTML = html;
+
+  // 自動スクロール
+  logContainer.scrollTop = logContainer.scrollHeight;
+}
+
+// ログをクリア
+async function clearLogs() {
+  await window.electronAPI.clearLogs();
+  refreshLogs();
 }

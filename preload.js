@@ -16,7 +16,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveAuth: (authData) => ipcRenderer.invoke('auth:save', authData),
   getAuthStatus: () => ipcRenderer.invoke('auth:status'),
   // ネクストエンジンAPI
-  neSearchOrders: (conditions) => ipcRenderer.invoke('ne:searchOrders', conditions)
+  neSearchOrders: (conditions) => ipcRenderer.invoke('ne:searchOrders', conditions),
+  // ログAPI
+  getLogs: () => ipcRenderer.invoke('log:get'),
+  clearLogs: () => ipcRenderer.invoke('log:clear')
 });
 
 // Node.jsとElectronのバージョン情報を公開
