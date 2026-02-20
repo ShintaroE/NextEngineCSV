@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const iconv = require('iconv-lite');
@@ -143,6 +143,70 @@ ipcMain.handle('auth:save', (event, authData) => {
 // IPC ハンドラー: 認証状態を取得
 ipcMain.handle('auth:status', () => {
   return nextengineApi.getAuthStatus();
+});
+
+// リダイレクトURI（認証コールバック用）
+const REDIRECT_URI = 'https://localhost/callback';
+
+// IPC ハンドラー: OAuth認証を開始
+ipcMain.handle('auth:startOAuth', async (event, clientId, clientSecret) => {
+  return new Promise((resolve, reject) => {
+    // 認証用ウィンドウを作成
+    const authWindow = new BrowserWindow({
+      width: 800,
+      height: 700,
+      show: true,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true
+      }
+    });
+
+    // リダイレクトをインターセプトするフィルタを設定
+    const filter = { urls: [`${REDIRECT_URI}*`] };
+
+    session.defaultSession.webRequest.onBeforeRequest(filter, async (details, callback) => {
+      try {
+        const url = new URL(details.url);
+        const uid = url.searchParams.get('uid');
+        const state = url.searchParams.get('state');
+
+        if (uid && state) {
+          // リダイレクトをキャンセル
+          callback({ cancel: true });
+
+          // 認証ウィンドウを閉じる
+          authWindow.close();
+
+          // フィルタを解除
+          session.defaultSession.webRequest.onBeforeRequest(filter, null);
+
+          // トークンを取得
+          try {
+            const tokens = await nextengineApi.fetchAccessToken(uid, state, clientId, clientSecret);
+            resolve({ success: true, tokens });
+          } catch (error) {
+            resolve({ success: false, error: error.message });
+          }
+        } else {
+          callback({ cancel: false });
+        }
+      } catch (error) {
+        callback({ cancel: false });
+        resolve({ success: false, error: error.message });
+      }
+    });
+
+    // ウィンドウが閉じられた場合
+    authWindow.on('closed', () => {
+      // フィルタを解除
+      session.defaultSession.webRequest.onBeforeRequest(filter, null);
+    });
+
+    // ログインURLを開く
+    const loginUrl = nextengineApi.getLoginUrl(clientId, REDIRECT_URI);
+    authWindow.loadURL(loginUrl);
+  });
 });
 
 // IPC ハンドラー: ネクストエンジンAPIで注文検索

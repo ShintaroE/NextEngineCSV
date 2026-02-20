@@ -425,7 +425,7 @@
     <!-- 認証画面 -->
     <div id="auth" class="tab-panel">
       <h2>認証設定</h2>
-      <p style="color: #666; margin-bottom: 20px;">ネクストエンジンAPIの認証情報を設定してください。</p>
+      <p style="color: #666; margin-bottom: 20px;">ネクストエンジンAPIの認証情報を設定してください。client_idとclient_secretを入力後、「認証開始」ボタンを押してください。</p>
 
       <div class="auth-form" style="max-width: 500px;">
         <div class="form-group">
@@ -436,17 +436,25 @@
           <label for="auth-client-secret">client_secret</label>
           <input type="password" id="auth-client-secret" placeholder="アプリ登録時に発行されたclient_secret">
         </div>
+
+        <div style="margin-top: 24px; margin-bottom: 24px;">
+          <button id="btn-start-oauth" class="btn btn-primary btn-large">認証開始</button>
+        </div>
+
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 24px 0;">
+
+        <p style="color: #999; font-size: 12px; margin-bottom: 12px;">以下のトークンは認証成功後に自動で設定されます</p>
         <div class="form-group">
           <label for="auth-access-token">access_token</label>
-          <input type="text" id="auth-access-token" placeholder="認証後に取得したaccess_token">
+          <input type="text" id="auth-access-token" placeholder="認証後に自動設定" readonly style="background-color: #f5f5f5;">
         </div>
         <div class="form-group">
           <label for="auth-refresh-token">refresh_token</label>
-          <input type="text" id="auth-refresh-token" placeholder="認証後に取得したrefresh_token">
+          <input type="text" id="auth-refresh-token" placeholder="認証後に自動設定" readonly style="background-color: #f5f5f5;">
         </div>
 
         <div style="margin-top: 24px; display: flex; align-items: center; gap: 16px;">
-          <button id="btn-save-auth" class="btn btn-primary">保存</button>
+          <button id="btn-save-auth" class="btn btn-secondary">設定を保存</button>
           <span id="auth-status" style="font-size: 14px; color: #666;">認証状態: 未設定</span>
         </div>
       </div>

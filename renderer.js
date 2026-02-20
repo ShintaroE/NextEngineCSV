@@ -356,12 +356,47 @@ async function exportCsv() {
 
 async function initAuthFeature() {
   const btnSaveAuth = document.getElementById('btn-save-auth');
+  const btnStartOAuth = document.getElementById('btn-start-oauth');
 
   // 保存ボタン
   btnSaveAuth.addEventListener('click', saveAuth);
 
+  // 認証開始ボタン
+  btnStartOAuth.addEventListener('click', startOAuth);
+
   // 初期データ読み込み
   await loadAuth();
+}
+
+// OAuth認証を開始
+async function startOAuth() {
+  const clientId = document.getElementById('auth-client-id').value.trim();
+  const clientSecret = document.getElementById('auth-client-secret').value.trim();
+
+  if (!clientId || !clientSecret) {
+    alert('client_id と client_secret を入力してください');
+    return;
+  }
+
+  const btnStartOAuth = document.getElementById('btn-start-oauth');
+  btnStartOAuth.disabled = true;
+  btnStartOAuth.textContent = '認証中...';
+
+  try {
+    const result = await window.electronAPI.startOAuth(clientId, clientSecret);
+
+    if (result.success) {
+      alert('認証が完了しました');
+      await loadAuth(); // トークン情報を再読み込み
+    } else {
+      alert('認証に失敗しました: ' + (result.error || '不明なエラー'));
+    }
+  } catch (error) {
+    alert('認証エラー: ' + error.message);
+  } finally {
+    btnStartOAuth.disabled = false;
+    btnStartOAuth.textContent = '認証開始';
+  }
 }
 
 // 認証情報を読み込む

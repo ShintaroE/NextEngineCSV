@@ -10,6 +10,7 @@ const path = require('path');
 
 // APIホスト
 const API_HOST = 'https://api.next-engine.org';
+const AUTH_HOST = 'https://base.next-engine.org';
 
 // データフォルダのパスを取得する関数（main.jsから渡される）
 let getDataDirFunc = null;
@@ -25,9 +26,81 @@ function getEndpointName(endpoint) {
   const names = {
     '/api_v1_receiveorder_base/search': '受注伝票検索',
     '/api_v1_receiveorder_base/count': '受注伝票件数',
-    '/api_v1_receiveorder_row/search': '受注明細検索'
+    '/api_v1_receiveorder_row/search': '受注明細検索',
+    '/api_neauth': '認証トークン取得'
   };
   return names[endpoint] || endpoint;
+}
+
+/**
+ * ログインURLを生成
+ * @param {string} clientId - クライアントID
+ * @param {string} redirectUri - リダイレクトURI
+ * @returns {string} ログインURL
+ */
+function getLoginUrl(clientId, redirectUri) {
+  return `${AUTH_HOST}/users/sign_in/?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+}
+
+/**
+ * uid/stateからアクセストークンを取得
+ * @param {string} uid - ユーザーID
+ * @param {string} state - 認証状態
+ * @param {string} clientId - クライアントID
+ * @param {string} clientSecret - クライアントシークレット
+ * @returns {Object} トークン情報
+ */
+async function fetchAccessToken(uid, state, clientId, clientSecret) {
+  const endpoint = '/api_neauth';
+  const url = `${API_HOST}${endpoint}`;
+
+  const requestParams = new URLSearchParams({
+    uid: uid,
+    state: state,
+    client_id: clientId,
+    client_secret: clientSecret
+  });
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: requestParams.toString()
+    });
+
+    const result = await response.json();
+
+    // エラーチェック
+    if (result.result !== 'success') {
+      const errorMsg = `${result.code} - ${result.message || 'Unknown error'}`;
+      addLog('error', endpoint, errorMsg);
+      throw new Error(`認証エラー: ${errorMsg}`);
+    }
+
+    // 成功ログ
+    addLog('success', endpoint, 'トークン取得成功');
+
+    // 認証情報を保存
+    const auth = loadAuthData();
+    auth.client_id = clientId;
+    auth.client_secret = clientSecret;
+    auth.access_token = result.access_token;
+    auth.refresh_token = result.refresh_token;
+    saveAuthData(auth);
+
+    return {
+      access_token: result.access_token,
+      refresh_token: result.refresh_token
+    };
+  } catch (error) {
+    if (!error.message.startsWith('認証エラー:')) {
+      addLog('error', endpoint, error.message);
+    }
+    console.error('トークン取得エラー:', error);
+    throw error;
+  }
 }
 
 /**
@@ -322,6 +395,8 @@ module.exports = {
   loadAuthData,
   saveAuthData,
   getAuthStatus,
+  getLoginUrl,
+  fetchAccessToken,
   callApi,
   searchOrders,
   searchOrderRows,

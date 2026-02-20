@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadAuth: () => ipcRenderer.invoke('auth:load'),
   saveAuth: (authData) => ipcRenderer.invoke('auth:save', authData),
   getAuthStatus: () => ipcRenderer.invoke('auth:status'),
+  startOAuth: (clientId, clientSecret) => ipcRenderer.invoke('auth:startOAuth', clientId, clientSecret),
   // ネクストエンジンAPI
   neSearchOrders: (conditions) => ipcRenderer.invoke('ne:searchOrders', conditions),
   // ログAPI
