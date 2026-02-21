@@ -288,6 +288,41 @@ ipcMain.handle('csv:save', async (event, csvContent) => {
   }
 });
 
+// IPC ハンドラー: 複数CSVを保存（分割出力用）
+ipcMain.handle('csv:saveMultiple', async (event, csvContents) => {
+  try {
+    // ファイル保存ダイアログを表示（ベースファイル名を取得）
+    const result = await dialog.showSaveDialog({
+      title: 'CSVファイルを保存（分割出力）',
+      defaultPath: 'clickpost.csv',
+      filters: [
+        { name: 'CSVファイル', extensions: ['csv'] }
+      ]
+    });
+
+    if (result.canceled || !result.filePath) {
+      return { success: false, canceled: true };
+    }
+
+    // ベースファイル名を取得（拡張子を除く）
+    const basePath = result.filePath.replace(/\.csv$/i, '');
+    const savedFiles = [];
+
+    // 各CSVを保存
+    for (let i = 0; i < csvContents.length; i++) {
+      const filePath = `${basePath}_${i + 1}.csv`;
+      const sjisBuffer = iconv.encode(csvContents[i], 'Shift_JIS');
+      fs.writeFileSync(filePath, sjisBuffer);
+      savedFiles.push(filePath);
+    }
+
+    return { success: true, filePaths: savedFiles, fileCount: savedFiles.length };
+  } catch (error) {
+    console.error('CSV複数保存エラー:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // 全ウィンドウが閉じられたらアプリを終了（macOS以外）
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

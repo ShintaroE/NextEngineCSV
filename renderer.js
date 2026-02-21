@@ -330,7 +330,7 @@ async function exportCsv() {
   // 2. お届け先氏名でソート
   expandedRows.sort((a, b) => a.shipName.localeCompare(b.shipName, 'ja'));
 
-  // 3. 同じお届け先氏名の出現回数をカウント
+  // 3. 同じお届け先氏名の出現回数をカウント（分割前の全データで計算）
   const nameCount = {};
   expandedRows.forEach(row => {
     nameCount[row.shipName] = (nameCount[row.shipName] || 0) + 1;
@@ -356,13 +356,35 @@ async function exportCsv() {
     ].map(field => `"${field}"`).join(',');
   });
 
-  const csvContent = [headers.join(','), ...rows].join('\n');
+  const MAX_ROWS_PER_FILE = 40;
 
-  // メインプロセスでファイル保存
-  const result = await window.electronAPI.saveCsv(csvContent);
+  // 40行以下の場合は単一ファイル保存
+  if (rows.length <= MAX_ROWS_PER_FILE) {
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const result = await window.electronAPI.saveCsv(csvContent);
+
+    if (result.success) {
+      alert(`${expandedRows.length}件のデータをCSV出力しました（元データ: ${selectedData.length}件）\n\n保存先: ${result.filePath}`);
+    } else if (result.canceled) {
+      // キャンセルされた場合は何もしない
+    } else {
+      alert('CSV保存に失敗しました: ' + (result.error || '不明なエラー'));
+    }
+    return;
+  }
+
+  // 41行以上の場合は分割保存
+  const csvContents = [];
+  for (let i = 0; i < rows.length; i += MAX_ROWS_PER_FILE) {
+    const chunk = rows.slice(i, i + MAX_ROWS_PER_FILE);
+    const csvContent = [headers.join(','), ...chunk].join('\n');
+    csvContents.push(csvContent);
+  }
+
+  const result = await window.electronAPI.saveCsvMultiple(csvContents);
 
   if (result.success) {
-    alert(`${expandedRows.length}件のデータをCSV出力しました（元データ: ${selectedData.length}件）\n\n保存先: ${result.filePath}`);
+    alert(`${result.fileCount}ファイルに分割して出力しました（計${expandedRows.length}件、元データ: ${selectedData.length}件）\n\n保存先: ${result.filePaths[0]} など`);
   } else if (result.canceled) {
     // キャンセルされた場合は何もしない
   } else {

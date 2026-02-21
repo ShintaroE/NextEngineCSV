@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadOrders: () => ipcRenderer.invoke('data:loadOrders'),
   // CSV操作API
   saveCsv: (csvContent) => ipcRenderer.invoke('csv:save', csvContent),
+  saveCsvMultiple: (csvContents) => ipcRenderer.invoke('csv:saveMultiple', csvContents),
   // 認証API
   loadAuth: () => ipcRenderer.invoke('auth:load'),
   saveAuth: (authData) => ipcRenderer.invoke('auth:save', authData),
