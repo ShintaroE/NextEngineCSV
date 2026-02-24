@@ -218,7 +218,18 @@ async function searchOrders() {
     const result = await window.electronAPI.neSearchOrders({});
 
     if (result.success) {
-      currentSearchResults = result.orders || [];
+      const orders = result.orders || [];
+
+      // マスタで商品名を上書き
+      const masterData = await window.electronAPI.loadMasters();
+      const masterMap = new Map(masterData.masters.map(m => [m.code, m.name]));
+      orders.forEach(item => {
+        if (item.productCode && masterMap.has(item.productCode)) {
+          item.productName = masterMap.get(item.productCode);
+        }
+      });
+
+      currentSearchResults = orders;
       renderSearchResults(currentSearchResults);
     } else {
       alert('検索に失敗しました: ' + (result.error || '不明なエラー'));
