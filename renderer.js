@@ -215,7 +215,11 @@ async function searchOrders() {
   btnSearch.textContent = '検索中...';
 
   try {
-    const result = await window.electronAPI.neSearchOrders({});
+    const result = await window.electronAPI.neSearchOrders({
+      'receive_order_order_status_id-in': '0,20',
+      'receive_order_confirm_check_id-eq': '1',
+      'receive_order_cancel_type_id-eq': '0'
+    });
 
     if (result.success) {
       const orders = result.orders || [];
