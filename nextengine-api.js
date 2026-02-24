@@ -273,7 +273,6 @@ async function callApi(endpoint, params = {}) {
 async function searchOrders(conditions = {}) {
   const fields = [
     'receive_order_id',
-    'receive_order_shop_cut_form_id',
     'receive_order_consignee_name',
     'receive_order_consignee_kana',
     'receive_order_consignee_zip_code',
@@ -360,8 +359,6 @@ async function fetchOrdersWithDetails(conditions = {}) {
     if (rows.length === 0) {
       results.push({
         slipNo: order.receive_order_id,
-        orderNo: order.receive_order_shop_cut_form_id,
-        shipCode: '',
         shipName: order.receive_order_consignee_name,
         postalCode: order.receive_order_consignee_zip_code,
         address: (order.receive_order_consignee_address1 || '') + (order.receive_order_consignee_address2 || ''),
@@ -373,8 +370,6 @@ async function fetchOrdersWithDetails(conditions = {}) {
       for (const row of rows) {
         results.push({
           slipNo: order.receive_order_id,
-          orderNo: order.receive_order_shop_cut_form_id,
-          shipCode: '',
           shipName: order.receive_order_consignee_name,
           postalCode: order.receive_order_consignee_zip_code,
           address: (order.receive_order_consignee_address1 || '') + (order.receive_order_consignee_address2 || ''),
