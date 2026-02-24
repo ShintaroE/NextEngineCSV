@@ -218,7 +218,8 @@ async function searchOrders() {
     const result = await window.electronAPI.neSearchOrders({
       'receive_order_order_status_id-in': '0,20',
       'receive_order_confirm_check_id-eq': '1',
-      'receive_order_cancel_type_id-eq': '0'
+      'receive_order_cancel_type_id-eq': '0',
+      'receive_order_deposit_type_id-eq': '2'
     });
 
     if (result.success) {
