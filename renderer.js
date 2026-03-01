@@ -216,7 +216,7 @@ async function searchOrders() {
 
   try {
     const result = await window.electronAPI.neSearchOrders({
-      'receive_order_order_status_id-in': '0,20',
+      'receive_order_order_status_id-in': '0,2,20',
       'receive_order_confirm_check_id-eq': '1',
       'receive_order_cancel_type_id-eq': '0',
       'receive_order_deposit_type_id-eq': '2'
@@ -266,14 +266,22 @@ function selectAll() {
 function renderSearchResults(results) {
   const tbody = document.getElementById('search-result-body');
   const chkSelectAll = document.getElementById('chk-select-all');
+  const countBar = document.getElementById('search-count-bar');
 
   // 全選択チェックボックスをリセット
   chkSelectAll.checked = false;
 
   if (results.length === 0) {
+    countBar.style.display = 'none';
     tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #999;">該当するデータがありません</td></tr>';
     return;
   }
+
+  // カウントバーを更新
+  const slipCount = new Set(results.map(item => item.slipNo)).size;
+  document.getElementById('count-rows').textContent = results.length;
+  document.getElementById('count-slips').textContent = slipCount;
+  countBar.style.display = 'block';
 
   tbody.innerHTML = results.map((item, index) => `
     <tr>
