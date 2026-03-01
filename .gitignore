@@ -5,3 +5,4 @@ dist
 # データファイル（.gitkeepは除く）
 data/*
 !data/.gitkeep
+.DS_Store

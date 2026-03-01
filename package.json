@@ -22,7 +22,9 @@
       "output": "dist"
     },
     "win": {
-      "target": "nsis"
+      "target": [
+        { "target": "portable", "arch": ["x64", "ia32"] }
+      ]
     }
   },
   "dependencies": {
