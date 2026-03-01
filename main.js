@@ -97,13 +97,17 @@ ipcMain.handle('master:add', (event, code, name) => {
 });
 
 // IPC ハンドラー: マスタを更新
-ipcMain.handle('master:update', (event, code, name) => {
+ipcMain.handle('master:update', (event, oldCode, newCode, name) => {
   const data = loadMasterData();
-  const index = data.masters.findIndex(m => m.code === code);
+  const index = data.masters.findIndex(m => m.code === oldCode);
   if (index === -1) {
     return { success: false, error: 'マスタが見つかりません' };
   }
-  data.masters[index].name = name;
+  // コードが変わる場合は重複チェック
+  if (newCode !== oldCode && data.masters.some(m => m.code === newCode)) {
+    return { success: false, error: '同じ商品コードが既に存在します' };
+  }
+  data.masters[index] = { code: newCode, name };
   const success = saveMasterData(data);
   return { success, data: success ? data : null };
 });

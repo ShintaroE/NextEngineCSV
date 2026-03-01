@@ -5,7 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // マスタ操作API
   loadMasters: () => ipcRenderer.invoke('master:load'),
   addMaster: (code, name) => ipcRenderer.invoke('master:add', code, name),
-  updateMaster: (code, name) => ipcRenderer.invoke('master:update', code, name),
+  updateMaster: (oldCode, newCode, name) => ipcRenderer.invoke('master:update', oldCode, newCode, name),
   deleteMaster: (code) => ipcRenderer.invoke('master:delete', code),
   // データ操作API
   loadOrders: () => ipcRenderer.invoke('data:loadOrders'),

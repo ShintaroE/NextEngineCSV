@@ -88,7 +88,7 @@ function openModal(code = null, name = '') {
     // 編集モード
     modalTitle.textContent = 'マスタ編集';
     codeInput.value = code;
-    codeInput.readOnly = true; // コードは編集不可
+    codeInput.readOnly = false;
     nameInput.value = name;
   } else {
     // 新規追加モード
@@ -148,8 +148,8 @@ async function saveMaster() {
 
   let result;
   if (editingCode) {
-    // 更新
-    result = await window.electronAPI.updateMaster(code, name);
+    // 更新（元のコードと新しいコード・名称を渡す）
+    result = await window.electronAPI.updateMaster(editingCode, code, name);
   } else {
     // 新規追加
     result = await window.electronAPI.addMaster(code, name);
