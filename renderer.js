@@ -368,6 +368,13 @@ async function exportCsv() {
     nameCount[row.shipName] = (nameCount[row.shipName] || 0) + 1;
   });
 
+  // 3.5. 伝票番号順に戻す
+  expandedRows.sort((a, b) => {
+    if (a.slipNo < b.slipNo) return -1;
+    if (a.slipNo > b.slipNo) return 1;
+    return 0;
+  });
+
   // 4. CSV行を生成（出現回数2以上なら◎をつける）
   const headers = ['お届け先郵便番号', 'お届け先氏名', 'お届け先敬称', 'お届け先住所1行目', 'お届け先住所2行目', 'お届け先住所3行目', 'お届け先住所4行目', '内容品', '重複'];
 
