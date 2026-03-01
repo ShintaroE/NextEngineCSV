@@ -62,6 +62,15 @@ function initMasterFeature() {
   // 登録ボタン
   modalSave.addEventListener('click', saveMaster);
 
+  // 編集・削除ボタン（イベント委譲）
+  document.getElementById('master-table-body').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const { action, code, name } = btn.dataset;
+    if (action === 'edit')   editMaster(code, name);
+    if (action === 'delete') deleteMaster(code);
+  });
+
   // 初期データ読み込み
   loadMasters();
 }
@@ -120,8 +129,8 @@ function renderMasterTable(masters) {
       <td>${escapeHtml(master.code)}</td>
       <td>${escapeHtml(master.name)}</td>
       <td class="actions">
-        <button class="btn btn-primary" onclick="editMaster('${escapeHtml(master.code)}', '${escapeHtml(master.name)}')">編集</button>
-        <button class="btn btn-danger" onclick="deleteMaster('${escapeHtml(master.code)}')">削除</button>
+        <button class="btn btn-primary" data-action="edit" data-code="${escapeHtml(master.code)}" data-name="${escapeHtml(master.name)}">編集</button>
+        <button class="btn btn-danger" data-action="delete" data-code="${escapeHtml(master.code)}">削除</button>
       </td>
     </tr>
   `).join('');
