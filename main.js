@@ -7,8 +7,13 @@ const nextengineApi = require('./nextengine-api');
 // データフォルダのパスを取得
 function getDataDir() {
   if (app.isPackaged) {
-    // ビルド後: exeと同じフォルダのdata/
-    return path.join(path.dirname(app.getPath('exe')), 'data');
+    // ポータブルビルド: 元のexeと同じフォルダのdata/
+    const portableDir = process.env.PORTABLE_EXECUTABLE_DIR;
+    if (portableDir) {
+      return path.join(portableDir, 'data');
+    }
+    // フォールバック: AppData（PORTABLE_EXECUTABLE_DIRが取れない場合）
+    return path.join(app.getPath('userData'), 'data');
   } else {
     // 開発時: プロジェクトフォルダのdata/
     return path.join(__dirname, 'data');
