@@ -21,7 +21,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   neSearchOrders: (conditions) => ipcRenderer.invoke('ne:searchOrders', conditions),
   // ログAPI
   getLogs: () => ipcRenderer.invoke('log:get'),
-  clearLogs: () => ipcRenderer.invoke('log:clear')
+  clearLogs: () => ipcRenderer.invoke('log:clear'),
+  // ダイアログAPI（Windows フォーカス問題回避）
+  showConfirm: (message) => ipcRenderer.invoke('dialog:confirm', message),
+  showAlert: (message) => ipcRenderer.invoke('dialog:alert', message)
 });
 
 // Node.jsとElectronのバージョン情報を公開

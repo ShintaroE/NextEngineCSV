@@ -142,7 +142,7 @@ async function saveMaster() {
   const name = document.getElementById('master-name').value.trim();
 
   if (!code || !name) {
-    alert('商品コードと名称を入力してください');
+    await window.electronAPI.showAlert('商品コードと名称を入力してください');
     return;
   }
 
@@ -159,7 +159,7 @@ async function saveMaster() {
     closeModal();
     renderMasterTable(result.data.masters);
   } else {
-    alert(result.error || '保存に失敗しました');
+    await window.electronAPI.showAlert(result.error || '保存に失敗しました');
   }
 }
 
@@ -170,7 +170,8 @@ function editMaster(code, name) {
 
 // マスタを削除
 async function deleteMaster(code) {
-  if (!confirm(`商品コード「${code}」を削除しますか？`)) {
+  const confirmed = await window.electronAPI.showConfirm(`商品コード「${code}」を削除しますか？`);
+  if (!confirmed) {
     return;
   }
 
@@ -178,7 +179,7 @@ async function deleteMaster(code) {
   if (result.success) {
     renderMasterTable(result.data.masters);
   } else {
-    alert(result.error || '削除に失敗しました');
+    await window.electronAPI.showAlert(result.error || '削除に失敗しました');
   }
 }
 

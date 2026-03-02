@@ -255,6 +255,29 @@ ipcMain.handle('log:clear', () => {
   return { success: true };
 });
 
+// IPC ハンドラー: 確認ダイアログ（Windows フォーカス問題回避）
+ipcMain.handle('dialog:confirm', async (event, message) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const { response } = await dialog.showMessageBox(win, {
+    type: 'question',
+    buttons: ['キャンセル', 'OK'],
+    defaultId: 1,
+    cancelId: 0,
+    message: message
+  });
+  return response === 1;
+});
+
+// IPC ハンドラー: アラートダイアログ（Windows フォーカス問題回避）
+ipcMain.handle('dialog:alert', async (event, message) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  await dialog.showMessageBox(win, {
+    type: 'info',
+    buttons: ['OK'],
+    message: message
+  });
+});
+
 // Electronの初期化が完了したらウィンドウを作成
 app.whenReady().then(() => {
   // NextEngine APIを初期化
