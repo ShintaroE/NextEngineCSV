@@ -1,0 +1,192 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## プロジェクト概要
+
+**NextEngineCSV** は、ネクストエンジン（eコマース受注管理システム）のAPIを活用して、受注データを検索・CSV出力するElectronデスクトップアプリケーションです。
+
+**技術スタック**: Electron + Vanilla JavaScript（Node.js環境）
+
+## 開発コマンド
+
+```bash
+# 開発環境で実行
+npm start
+
+# Windowsポータブルビルド（x64 + ia32）
+npm run build:win
+
+# クロスプラットフォームビルド
+npm run build
+```
+
+**注**: テストフレームワークは未導入
+
+## アーキテクチャ
+
+### 3層IPC通信構造
+
+```
+[UI Layer]
+  ├─ index.html (497行) - レイアウト・スタイル
+  └─ renderer.js (619行) - UIロジック、タブ管理、CSV生成
+         ↓ IPC通信
+[Main Process Layer]
+  ├─ preload.js (36行) - セキュアなAPI公開層
+  └─ main.js (364行) - IPCハンドラー、ファイルI/O、OAuth認証
+         ↓
+[API/Data Layer]
+  ├─ nextengine-api.js (402行) - ネクストエンジンAPI通信、ログ管理
+  └─ data/*.json - 永続化データ（認証情報、マスタ）
+```
+
+### 主要ファイルの責務
+
+| ファイル | 役割 |
+|---------|------|
+| [main.js](main.js) | Electronメインプロセス。ウィンドウ作成、IPC通信、ファイルI/O、OAuth認証フロー |
+| [preload.js](preload.js) | Context Isolation用のAPI公開層。`window.electronAPI`を提供 |
+| [renderer.js](renderer.js) | UIロジック。タブ管理、フォーム処理、CSV出力ロジック、イベントハンドリング |
+| [nextengine-api.js](nextengine-api.js) | ネクストエンジンAPI通信。認証、トークン管理、ログ機構 |
+| [index.html](index.html) | UIレイアウト。4タブ構成（検索、マスタ設定、認証、ログ出力） |
+
+### IPC通信インターフェース
+
+`preload.js`で公開されるAPI（`window.electronAPI`）:
+
+```javascript
+// マスタ操作
+loadMasters() → Promise<Array>
+addMaster(code, name) → Promise<void>
+updateMaster(oldCode, newCode, name) → Promise<void>
+deleteMaster(code) → Promise<void>
+
+// データ操作
+loadOrders() → Promise<Array>
+
+// CSV操作
+saveCsv(csvContent) → Promise<void>
+saveCsvMultiple(csvContents) → Promise<void>
+
+// 認証関連
+loadAuth() → Promise<Object>
+saveAuth(authData) → Promise<void>
+getAuthStatus() → Promise<boolean>
+startOAuth(clientId, clientSecret) → Promise<Object>
+
+// ネクストエンジンAPI
+neSearchOrders(conditions) → Promise<Object>
+
+// ログ
+getLogs() → Promise<Array>
+clearLogs() → Promise<void>
+
+// ダイアログ
+showConfirm(message) → Promise<boolean>
+showAlert(message) → Promise<void>
+```
+
+## データファイル管理
+
+### ポータブルビルド対応
+
+データファイルの読み込み優先順位（[main.js:13-37](main.js#L13-L37)）:
+
+1. **ビルド時**: `exe同じフォルダのdata/`
+2. **開発時**: `プロジェクトルートのdata/`
+3. **フォールバック**: `AppData/Roaming/NextEngineCSV/data/`
+
+### データファイル
+
+- `data/auth.json` - 認証情報（client_id, client_secret, access_token, refresh_token）
+- `data/master-data.json` - 商品マスタ（`[{code, name}, ...]`形式）
+
+## 主要機能
+
+### 1. 受注検索・CSV出力（検索タブ）
+
+- 固定検索条件: ステータス（保留中/確認/一部発送）、確認済み、キャンセルなし、入金済み
+- **40行以下**: 単一CSV
+- **41行以上**: 自動分割（`_1.csv`, `_2.csv`...）
+- 住所を20文字×4行に分割（[renderer.js:287](renderer.js#L287) `splitAddress`）
+- 重複配送先に`◎`マーク付与（[renderer.js:363](renderer.js#L363)）
+- Shift_JISエンコード（`iconv-lite`使用）
+
+### 2. マスタ設定（マスタ設定タブ）
+
+- CRUD操作: 追加、編集（コード・名称変更可能）、削除
+- 「マスタで上書き」: 検索結果の商品名をマスタで置き換え
+- JSON永続化（`data/master-data.json`）
+
+### 3. OAuth2認証（認証タブ）
+
+- ブラウザウィンドウで認証フロー
+- トークン自動更新（API通信時にレスポンスから取得）
+- 有効期限目安: access_token 24時間、refresh_token 72時間
+
+### 4. ログ出力（ログ出力タブ）
+
+- API通信の全ログを記録（メモリ保持、最大100件）
+- 2秒ごと自動更新（ログタブ表示時）
+- クリア機能付き
+
+## セキュリティ設定
+
+- **Context Isolation**: 有効
+- **Node Integration**: 無効
+- **CSP**: `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'`
+- **XSS防止**: `escapeHtml`関数実装（[renderer.js:9](renderer.js#L9)）
+
+## 開発時のポイント
+
+### イベント委譲パターン
+
+マスタテーブルのボタン処理は委譲で実装（[renderer.js:430-459](renderer.js#L430-L459)）:
+
+```javascript
+document.getElementById('master-table-body').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-action]');
+  if (!btn) return;
+  const action = btn.dataset.action;
+  const code = btn.closest('tr').dataset.code;
+  // ...
+});
+```
+
+### トークンリフレッシュ
+
+`nextengine-api.js`でAPI通信時に自動でトークンを更新（[nextengine-api.js:200-205](nextengine-api.js#L200-L205)）:
+
+```javascript
+// レスポンスヘッダーから新トークンを取得して保存
+if (data.access_token) {
+  // mainプロセスへ保存依頼
+}
+```
+
+### CSV分割ロジック
+
+40行超の場合、自動分割（[renderer.js:377-451](renderer.js#L377-L451)）:
+
+```javascript
+if (rows.length > 40) {
+  // ファイル名に _1, _2 を付与
+}
+```
+
+## ネクストエンジンAPI
+
+- **ベースURL**: `https://api.next-engine.org`
+- **認証エンドポイント**: `https://base.next-engine.org`
+- **OAuth2**: クライアント認証フロー
+- **ドキュメント**: [ネクストエンジンAPI仕様](https://developer.next-engine.com/)
+
+## ビルド設定
+
+`package.json`の`build`セクション:
+
+- **appId**: `com.example.nextenginecsv`
+- **productName**: `NextEngineCSV`
+- **出力先**: `dist/`
+- **ターゲット**: Windows Portable (x64 + ia32)
