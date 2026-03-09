@@ -24,7 +24,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   clearLogs: () => ipcRenderer.invoke('log:clear'),
   // ダイアログAPI（Windows フォーカス問題回避）
   showConfirm: (message) => ipcRenderer.invoke('dialog:confirm', message),
-  showAlert: (message) => ipcRenderer.invoke('dialog:alert', message)
+  showAlert: (message) => ipcRenderer.invoke('dialog:alert', message),
+  // クリックポストAPI
+  loadClickPostCsv: () => ipcRenderer.invoke('clickpost:loadCsv'),
+  startClickPostAutomation: (csvData) => ipcRenderer.invoke('clickpost:startAutomation', csvData),
+  stopClickPostAutomation: () => ipcRenderer.invoke('clickpost:stopAutomation'),
+  onClickPostProgress: (callback) => ipcRenderer.on('clickpost:progress', callback)
 });
 
 // Node.jsとElectronのバージョン情報を公開

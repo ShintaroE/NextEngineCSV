@@ -23,6 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // 検索機能の初期化
   initSearchFeature();
 
+  // クリックポスト機能の初期化
+  initClickPostFeature();
+
   // 認証機能の初期化
   initAuthFeature();
 
@@ -615,4 +618,212 @@ function renderLogs(logs) {
 async function clearLogs() {
   await window.electronAPI.clearLogs();
   refreshLogs();
+}
+
+// ========================================
+// クリックポスト自動決済機能
+// ========================================
+
+let clickpostCsvData = null;
+let isAutomationRunning = false;
+
+function initClickPostFeature() {
+  const btnLoadCsv = document.getElementById('btn-load-clickpost-csv');
+  const btnStartAutomation = document.getElementById('btn-start-automation');
+  const btnStopAutomation = document.getElementById('btn-stop-automation');
+
+  // CSV読み込みボタン
+  btnLoadCsv.addEventListener('click', loadClickPostCsv);
+
+  // 自動決済開始ボタン
+  btnStartAutomation.addEventListener('click', startAutomation);
+
+  // 停止ボタン
+  btnStopAutomation.addEventListener('click', stopAutomation);
+
+  // 進行状況イベントを受信
+  window.electronAPI.onClickPostProgress((event, progress) => {
+    updateProgress(progress);
+  });
+}
+
+// CSVファイルを読み込む
+async function loadClickPostCsv() {
+  const result = await window.electronAPI.loadClickPostCsv();
+
+  if (result.canceled) {
+    return;
+  }
+
+  if (!result.success) {
+    await window.electronAPI.showAlert(`CSVの読み込みに失敗しました: ${result.error}`);
+    return;
+  }
+
+  // データを保存
+  clickpostCsvData = result.data;
+
+  // ファイル情報を表示
+  const csvInfo = document.getElementById('csv-info');
+  csvInfo.textContent = `ファイル: ${result.fileName} (${result.rowCount}件)`;
+  csvInfo.style.color = '#27ae60';
+
+  // プレビューを表示
+  showPreview(result.data);
+}
+
+// データプレビューを表示
+function showPreview(data) {
+  const previewSection = document.getElementById('clickpost-preview');
+  const summaryDiv = document.getElementById('clickpost-summary');
+  const previewBody = document.getElementById('clickpost-preview-body');
+  const actionSection = document.getElementById('clickpost-action');
+
+  // サマリーを表示
+  summaryDiv.innerHTML = `<strong>合計: ${data.length}件</strong>のデータを読み込みました`;
+
+  // プレビューテーブルを作成（最初の10件のみ）
+  const previewData = data.slice(0, 10);
+  const html = previewData.map((row, index) => {
+    const postalCode = row['お届け先郵便番号'] || row['郵便番号'] || '';
+    const name = row['お届け先氏名'] || row['氏名'] || '';
+    const address = [
+      row['お届け先住所1'] || row['住所1'] || '',
+      row['お届け先住所2'] || row['住所2'] || '',
+      row['お届け先住所3'] || row['住所3'] || '',
+      row['お届け先住所4'] || row['住所4'] || ''
+    ].filter(a => a).join(' ');
+    const productName = row['商品名'] || '';
+
+    return `<tr>
+      <td>${index + 1}</td>
+      <td>${escapeHtml(postalCode)}</td>
+      <td>${escapeHtml(name)}</td>
+      <td>${escapeHtml(address)}</td>
+      <td>${escapeHtml(productName)}</td>
+    </tr>`;
+  }).join('');
+
+  previewBody.innerHTML = html;
+
+  if (data.length > 10) {
+    previewBody.innerHTML += `<tr><td colspan="5" style="text-align: center; color: #999;">... 他${data.length - 10}件</td></tr>`;
+  }
+
+  // プレビューセクションとアクションセクションを表示
+  previewSection.style.display = 'block';
+  actionSection.style.display = 'block';
+}
+
+// 自動決済を開始
+async function startAutomation() {
+  if (!clickpostCsvData || clickpostCsvData.length === 0) {
+    await window.electronAPI.showAlert('CSVデータがありません。先にCSVファイルを読み込んでください。');
+    return;
+  }
+
+  const confirmed = await window.electronAPI.showConfirm(
+    `${clickpostCsvData.length}件のクリックポスト決済を自動実行します。\n\nこの処理には時間がかかる場合があります。よろしいですか?`
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  // 自動決済を開始
+  isAutomationRunning = true;
+  updateAutomationButtons();
+
+  // 進行状況セクションを表示
+  const progressSection = document.getElementById('clickpost-progress');
+  progressSection.style.display = 'block';
+
+  // 進行状況をリセット
+  document.getElementById('progress-bar-fill').style.width = '0%';
+  document.getElementById('progress-text').textContent = '0 / 0 件処理完了';
+  document.getElementById('progress-log').innerHTML = '';
+
+  // 自動決済を実行
+  const result = await window.electronAPI.startClickPostAutomation(clickpostCsvData);
+
+  if (!result.success) {
+    await window.electronAPI.showAlert(`自動決済の実行に失敗しました: ${result.error}`);
+    isAutomationRunning = false;
+    updateAutomationButtons();
+    return;
+  }
+
+  // 完了
+  isAutomationRunning = false;
+  updateAutomationButtons();
+}
+
+// 自動決済を停止
+async function stopAutomation() {
+  const confirmed = await window.electronAPI.showConfirm('自動決済を停止しますか?');
+
+  if (!confirmed) {
+    return;
+  }
+
+  await window.electronAPI.stopClickPostAutomation();
+  isAutomationRunning = false;
+  updateAutomationButtons();
+
+  addProgressLog('停止されました', 'error');
+}
+
+// 進行状況を更新
+function updateProgress(progress) {
+  const { current, total, message, status } = progress;
+
+  // プログレスバーを更新
+  const percentage = total > 0 ? (current / total) * 100 : 0;
+  document.getElementById('progress-bar-fill').style.width = `${percentage}%`;
+
+  // テキストを更新
+  document.getElementById('progress-text').textContent = `${current} / ${total} 件処理完了`;
+
+  // ログを追加
+  if (message) {
+    addProgressLog(message, status || 'info');
+  }
+}
+
+// 進行状況ログを追加
+function addProgressLog(message, status = 'info') {
+  const progressLog = document.getElementById('progress-log');
+  const time = new Date().toLocaleTimeString('ja-JP');
+
+  const statusColors = {
+    success: '#27ae60',
+    error: '#e74c3c',
+    info: '#666'
+  };
+
+  const color = statusColors[status] || statusColors.info;
+
+  const logLine = document.createElement('div');
+  logLine.style.color = color;
+  logLine.style.marginBottom = '4px';
+  logLine.textContent = `[${time}] ${message}`;
+
+  progressLog.appendChild(logLine);
+
+  // 自動スクロール
+  progressLog.scrollTop = progressLog.scrollHeight;
+}
+
+// ボタンの表示状態を更新
+function updateAutomationButtons() {
+  const btnStart = document.getElementById('btn-start-automation');
+  const btnStop = document.getElementById('btn-stop-automation');
+
+  if (isAutomationRunning) {
+    btnStart.style.display = 'none';
+    btnStop.style.display = 'inline-block';
+  } else {
+    btnStart.style.display = 'inline-block';
+    btnStop.style.display = 'none';
+  }
 }

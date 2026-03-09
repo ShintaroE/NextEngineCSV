@@ -334,6 +334,7 @@
   <!-- タブナビゲーション -->
   <ul class="tab-nav">
     <li class="active" data-tab="search">検索</li>
+    <li data-tab="clickpost">クリックポスト自動決済</li>
     <li data-tab="log">ログ出力</li>
     <li data-tab="master">マスタ設定</li>
     <li data-tab="auth">認証</li>
@@ -382,6 +383,72 @@
       <div class="action-footer">
         <button id="btn-csv-export" class="btn btn-success btn-large">CSV出力</button>
       </div>
+    </div>
+
+    <!-- クリックポスト自動決済画面 -->
+    <div id="clickpost" class="tab-panel">
+      <h2>クリックポスト自動決済</h2>
+
+      <!-- ステップ1: CSV読み込み -->
+      <section style="margin-bottom: 32px;">
+        <h3 style="color: #2c3e50; font-size: 16px; margin-bottom: 12px;">1. CSVファイルを選択</h3>
+        <button id="btn-load-clickpost-csv" class="btn btn-primary">
+          CSVファイルを開く
+        </button>
+        <div id="csv-info" style="margin-top: 12px; color: #666; font-size: 14px;"></div>
+      </section>
+
+      <!-- ステップ2: データプレビュー -->
+      <section id="clickpost-preview" style="display: none; margin-bottom: 32px;">
+        <h3 style="color: #2c3e50; font-size: 16px; margin-bottom: 12px;">2. データを確認</h3>
+        <div id="clickpost-summary" style="background: #f0f4f8; border: 1px solid #d0d9e3; border-radius: 4px; padding: 12px; margin-bottom: 16px; font-size: 14px;">
+        </div>
+        <div style="max-height: 300px; overflow-y: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 50px;">No.</th>
+                <th>お届け先郵便番号</th>
+                <th>お届け先氏名</th>
+                <th>住所</th>
+                <th>商品名</th>
+              </tr>
+            </thead>
+            <tbody id="clickpost-preview-body">
+              <!-- データはJSで動的に追加 -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ステップ3: 自動決済実行 -->
+      <section id="clickpost-action" style="display: none; margin-bottom: 32px;">
+        <h3 style="color: #2c3e50; font-size: 16px; margin-bottom: 12px;">3. 自動決済を実行</h3>
+        <div style="display: flex; gap: 16px; align-items: center;">
+          <button id="btn-start-automation" class="btn btn-success btn-large">
+            自動決済を開始
+          </button>
+          <button id="btn-stop-automation" class="btn btn-danger" style="display: none;">
+            停止
+          </button>
+        </div>
+      </section>
+
+      <!-- 進行状況 -->
+      <section id="clickpost-progress" style="display: none;">
+        <h3 style="color: #2c3e50; font-size: 16px; margin-bottom: 12px;">進行状況</h3>
+        <div style="background: #f8f9fa; border-radius: 4px; padding: 16px;">
+          <div style="background: #e9ecef; border-radius: 8px; height: 24px; overflow: hidden; margin-bottom: 12px;">
+            <div id="progress-bar-fill" style="background: linear-gradient(90deg, #27ae60, #2ecc71); height: 100%; width: 0%; transition: width 0.3s;"></div>
+          </div>
+          <div id="progress-text" style="font-size: 14px; font-weight: 600; color: #2c3e50; margin-bottom: 8px;">
+            0 / 0 件処理完了
+          </div>
+          <div id="progress-log" style="max-height: 200px; overflow-y: auto; font-size: 13px; color: #666;">
+            <!-- ログはJSで動的に追加 -->
+          </div>
+        </div>
+      </section>
     </div>
 
     <!-- ログ出力画面 -->

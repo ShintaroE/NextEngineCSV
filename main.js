@@ -255,6 +255,110 @@ ipcMain.handle('log:clear', () => {
   return { success: true };
 });
 
+// ========================================
+// クリックポスト自動決済関連 IPC ハンドラー
+// ========================================
+
+let clickpostAutomation = null;
+let mainWindowForProgress = null;
+
+// IPC ハンドラー: クリックポスト用CSVを読み込む
+ipcMain.handle('clickpost:loadCsv', async (event) => {
+  try {
+    // ファイル選択ダイアログを表示
+    const result = await dialog.showOpenDialog({
+      title: 'クリックポスト用CSVファイルを選択',
+      filters: [
+        { name: 'CSVファイル', extensions: ['csv'] }
+      ],
+      properties: ['openFile']
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false, canceled: true };
+    }
+
+    const filePath = result.filePaths[0];
+
+    // ファイルを読み込む（Shift-JIS対応）
+    let content;
+    try {
+      const buffer = fs.readFileSync(filePath);
+      content = iconv.decode(buffer, 'Shift_JIS');
+    } catch (error) {
+      // Shift-JISで読めない場合はUTF-8で試す
+      content = fs.readFileSync(filePath, 'utf-8');
+    }
+
+    // CSVをパース
+    const lines = content.split('\n').filter(line => line.trim());
+    if (lines.length < 2) {
+      return { success: false, error: 'CSVデータが空です' };
+    }
+
+    // ヘッダー行を解析
+    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+
+    // データ行をパース
+    const data = [];
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+      const row = {};
+      headers.forEach((header, index) => {
+        row[header] = values[index] || '';
+      });
+      data.push(row);
+    }
+
+    return { success: true, data, fileName: path.basename(filePath), rowCount: data.length };
+  } catch (error) {
+    console.error('CSV読み込みエラー:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// IPC ハンドラー: クリックポスト自動決済を開始
+ipcMain.handle('clickpost:startAutomation', async (event, csvData) => {
+  try {
+    // メインウィンドウへの参照を保存
+    mainWindowForProgress = BrowserWindow.fromWebContents(event.sender);
+
+    // 自動化モジュールを読み込む（初回のみ）
+    if (!clickpostAutomation) {
+      const ClickPostAutomation = require('./clickpost-automation');
+      clickpostAutomation = new ClickPostAutomation();
+    }
+
+    // 進行状況コールバックを設定
+    clickpostAutomation.onProgress((progress) => {
+      if (mainWindowForProgress && !mainWindowForProgress.isDestroyed()) {
+        mainWindowForProgress.webContents.send('clickpost:progress', progress);
+      }
+    });
+
+    // 自動決済を実行
+    await clickpostAutomation.start(csvData);
+
+    return { success: true };
+  } catch (error) {
+    console.error('クリックポスト自動決済エラー:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// IPC ハンドラー: クリックポスト自動決済を停止
+ipcMain.handle('clickpost:stopAutomation', async () => {
+  try {
+    if (clickpostAutomation) {
+      await clickpostAutomation.stop();
+    }
+    return { success: true };
+  } catch (error) {
+    console.error('クリックポスト停止エラー:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // IPC ハンドラー: 確認ダイアログ（Windows フォーカス問題回避）
 ipcMain.handle('dialog:confirm', async (event, message) => {
   const win = BrowserWindow.fromWebContents(event.sender);
