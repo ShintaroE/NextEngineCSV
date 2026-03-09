@@ -49,7 +49,9 @@ npm run build
 | [preload.js](preload.js) | Context Isolation用のAPI公開層。`window.electronAPI`を提供 |
 | [renderer.js](renderer.js) | UIロジック。タブ管理、フォーム処理、CSV出力ロジック、イベントハンドリング |
 | [nextengine-api.js](nextengine-api.js) | ネクストエンジンAPI通信。認証、トークン管理、ログ機構 |
-| [index.html](index.html) | UIレイアウト。4タブ構成（検索、マスタ設定、認証、ログ出力） |
+| [clickpost-automation.js](clickpost-automation.js) | Playwright自動化。クリックポスト決済の自動実行 |
+| [clickpost-selectors.json](clickpost-selectors.json) | クリックポストセレクター設定（カスタマイズ可能） |
+| [index.html](index.html) | UIレイアウト。5タブ構成（検索、クリックポスト、ログ、マスタ、認証） |
 
 ### IPC通信インターフェース
 
@@ -125,7 +127,19 @@ showAlert(message) → Promise<void>
 - トークン自動更新（API通信時にレスポンスから取得）
 - 有効期限目安: access_token 24時間、refresh_token 72時間
 
-### 4. ログ出力（ログ出力タブ）
+### 4. クリックポスト自動決済（クリックポストタブ）
+
+- **CSV読み込み**: ネクストエンジンから出力したCSVを読み込み
+- **データプレビュー**: 最初の10件をテーブル表示
+- **自動決済実行**: Playwrightでブラウザ自動操作
+  - 手動ログイン待機（Yahoo!/Amazon Pay）
+  - フォーム自動入力（郵便番号、氏名、住所、商品名）
+  - 決済ボタン自動クリック
+- **進行状況表示**: リアルタイムプログレスバー、ログ表示
+- **停止機能**: 処理中断可能
+- **セレクター設定**: [clickpost-selectors.json](clickpost-selectors.json)でカスタマイズ可能
+
+### 5. ログ出力（ログ出力タブ）
 
 - API通信の全ログを記録（メモリ保持、最大100件）
 - 2秒ごと自動更新（ログタブ表示時）
@@ -173,6 +187,29 @@ if (data.access_token) {
 if (rows.length > 40) {
   // ファイル名に _1, _2 を付与
 }
+```
+
+### クリックポストセレクターの調整
+
+[clickpost-selectors.json](clickpost-selectors.json) でセレクターをカスタマイズ:
+
+1. ブラウザ開発者ツール（F12）でクリックポストサイトを確認
+2. フォーム要素の`name`属性、`id`属性、`class`名を取得
+3. JSONファイルのセレクターを実際のものに更新
+
+```json
+{
+  "labelForm": {
+    "postalCode": "input[name='postal_code']",  // 実際のname属性に合わせる
+    "recipientName": "input[id='recipient_name']"
+  }
+}
+```
+
+複数セレクターをカンマ区切りで指定可能（フォールバック対応）:
+
+```json
+"postalCode": "input[name='postal_code'], input[id='postal'], #postalCode"
 ```
 
 ## ネクストエンジンAPI

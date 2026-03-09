@@ -1,0 +1,47 @@
+{
+  "description": "クリックポストサイトのセレクター設定ファイル",
+  "lastUpdated": "2026-03-09",
+  "note": "実際のサイト構造に合わせて調整してください。開発者ツール(F12)でセレクターを確認できます。",
+
+  "urls": {
+    "top": "https://clickpost.jp/",
+    "login": "https://login.yahoo.co.jp/config/login",
+    "mypage": "https://clickpost.jp/mypage",
+    "newLabel": "https://clickpost.jp/mypage/new",
+    "multiplePayment": "https://clickpost.jp/labels/multiple_payment"
+  },
+
+  "login": {
+    "username": "#username",
+    "password": "#passwd",
+    "nextButton": "#btnNext",
+    "submitButton": "#btnSubmit"
+  },
+
+  "labelForm": {
+    "note": "新規ラベル作成フォームのセレクター（要調整）",
+    "postalCode": "input[name='postal_code'], input[id*='postal'], input[name*='postal']",
+    "recipientName": "input[name='recipient_name'], input[id*='name'], input[name*='name']",
+    "address1": "input[name='address1'], textarea[name='address1']",
+    "address2": "input[name='address2'], textarea[name='address2']",
+    "address3": "input[name='address3'], textarea[name='address3']",
+    "content": "input[name='content'], textarea[name='content']",
+    "submitButton": "button[type='submit'], input[type='submit'], button.btn-primary"
+  },
+
+  "payment": {
+    "cvv": "#cvv",
+    "consentCheckbox": "#consent-matters-agree",
+    "confirmButton": "#payment_complete_message > input, button[type='submit']"
+  },
+
+  "navigation": {
+    "newLabelButton": "a[href*='new'], a[href*='regist'], .btn-new-label",
+    "myPageIndicator": "#mypage, .mypage-container, [class*='mypage']"
+  },
+
+  "errors": {
+    "errorMessage": ".error-message, .alert-danger, [class*='error'], .alert-error",
+    "validationError": ".field_with_errors, .has-error, [class*='invalid']"
+  }
+}

@@ -1,4 +1,6 @@
 const { chromium } = require('playwright');
+const fs = require('fs');
+const path = require('path');
 
 /**
  * クリックポスト自動決済クラス
@@ -9,6 +11,45 @@ class ClickPostAutomation {
     this.page = null;
     this.progressCallback = null;
     this.isStopped = false;
+
+    // セレクター設定を読み込む
+    try {
+      const selectorsPath = path.join(__dirname, 'clickpost-selectors.json');
+      const selectorsJson = fs.readFileSync(selectorsPath, 'utf-8');
+      this.selectors = JSON.parse(selectorsJson);
+    } catch (error) {
+      console.error('セレクター設定ファイルの読み込みエラー:', error);
+      // デフォルトのセレクターを使用
+      this.selectors = this.getDefaultSelectors();
+    }
+  }
+
+  /**
+   * デフォルトセレクター（フォールバック用）
+   */
+  getDefaultSelectors() {
+    return {
+      urls: {
+        mypage: 'https://clickpost.jp/mypage',
+        newLabel: 'https://clickpost.jp/mypage/new'
+      },
+      navigation: {
+        newLabelButton: 'a[href*="new"], a[href*="regist"]',
+        myPageIndicator: '#mypage, .mypage-container'
+      },
+      labelForm: {
+        postalCode: "input[name='postal_code'], input[name*='postal']",
+        recipientName: "input[name='recipient_name'], input[name*='name']",
+        address1: "input[name='address1'], textarea[name='address1']",
+        address2: "input[name='address2'], textarea[name='address2']",
+        address3: "input[name='address3'], textarea[name='address3']",
+        content: "input[name='content'], textarea[name='content']",
+        submitButton: "button[type='submit'], input[type='submit']"
+      },
+      errors: {
+        errorMessage: ".error-message, .alert-danger, [class*='error']"
+      }
+    };
   }
 
   /**
@@ -56,8 +97,15 @@ class ClickPostAutomation {
       this.sendProgress(0, csvData.length, 'ログインしてください（手動）', 'info');
 
       // ログイン後のページを待機（ユーザーが手動でログイン）
-      // マイページのURLを待機
-      await this.page.waitForURL('**/mypage/**', { timeout: 300000 }); // 5分待機
+      // マイページのURLまたは要素を待機
+      try {
+        await Promise.race([
+          this.page.waitForURL('**/mypage/**', { timeout: 300000 }),
+          this.page.waitForSelector(this.selectors.navigation.myPageIndicator, { timeout: 300000 })
+        ]);
+      } catch (error) {
+        throw new Error('ログインタイムアウト。5分以内にログインしてください。');
+      }
 
       this.sendProgress(0, csvData.length, 'ログイン完了。処理を開始します...', 'success');
 
@@ -101,18 +149,20 @@ class ClickPostAutomation {
    * 1行を処理（1件のクリックポスト登録）
    */
   async processRow(row, currentIndex, total) {
-    // 新規登録ページへ移動
-    // 注意: 実際のクリックポストサイトのセレクターは異なる可能性があります
-    // この実装は参考例であり、実際のサイト構造に合わせて調整が必要です
-
     this.sendProgress(currentIndex - 1, total, `${currentIndex}件目: 登録フォームを開いています...`, 'info');
 
-    // 新規作成ボタンをクリック（セレクターは実際のサイトに合わせて調整）
+    // 新規作成ボタンをクリックまたは直接URLに移動
     try {
-      await this.page.click('a[href*="regist"]', { timeout: 5000 });
+      const newLabelButton = await this.page.$(this.selectors.navigation.newLabelButton);
+      if (newLabelButton) {
+        await newLabelButton.click();
+      } else {
+        // ボタンが見つからない場合は直接URLに移動
+        await this.page.goto(this.selectors.urls.newLabel || 'https://clickpost.jp/mypage/new');
+      }
     } catch (error) {
-      // ボタンが見つからない場合は直接URLに移動
-      await this.page.goto('https://clickpost.jp/mypage/regist');
+      // エラー時は直接URLに移動
+      await this.page.goto(this.selectors.urls.newLabel || 'https://clickpost.jp/mypage/new');
     }
 
     await this.page.waitForLoadState('networkidle');
@@ -123,52 +173,59 @@ class ClickPostAutomation {
     // 郵便番号
     const postalCode = row['お届け先郵便番号'] || row['郵便番号'] || '';
     if (postalCode) {
-      await this.fillInput('input[name*="postal"]', postalCode);
+      await this.fillInputMulti(this.selectors.labelForm.postalCode, postalCode);
     }
 
     // 氏名
     const name = row['お届け先氏名'] || row['氏名'] || '';
     if (name) {
-      await this.fillInput('input[name*="name"]', name);
+      await this.fillInputMulti(this.selectors.labelForm.recipientName, name);
     }
 
     // 住所1（都道府県・市区町村）
     const address1 = row['お届け先住所1'] || row['住所1'] || '';
     if (address1) {
-      await this.fillInput('input[name*="address1"]', address1);
+      await this.fillInputMulti(this.selectors.labelForm.address1, address1);
     }
 
     // 住所2（町域・番地）
     const address2 = row['お届け先住所2'] || row['住所2'] || '';
     if (address2) {
-      await this.fillInput('input[name*="address2"]', address2);
+      await this.fillInputMulti(this.selectors.labelForm.address2, address2);
     }
 
     // 住所3（建物名等）
     const address3 = row['お届け先住所3'] || row['住所3'] || '';
     if (address3) {
-      await this.fillInput('input[name*="address3"]', address3);
+      await this.fillInputMulti(this.selectors.labelForm.address3, address3);
     }
 
     // 内容品（商品名）
     const productName = row['商品名'] || '';
     if (productName) {
-      await this.fillInput('input[name*="content"]', productName);
+      await this.fillInputMulti(this.selectors.labelForm.content, productName);
     }
+
+    // 少し待機（フォーム検証のため）
+    await this.page.waitForTimeout(500);
 
     // 決済ボタンをクリック
     this.sendProgress(currentIndex - 1, total, `${currentIndex}件目: 決済を実行しています...`, 'info');
 
     try {
-      // 決済ボタン（実際のセレクターに合わせて調整）
-      await this.page.click('button[type="submit"]', { timeout: 5000 });
-      await this.page.waitForLoadState('networkidle');
+      // 決済ボタンをクリック
+      await this.clickMulti(this.selectors.labelForm.submitButton);
+      await this.page.waitForLoadState('networkidle', { timeout: 10000 });
 
       // エラーチェック
       const hasError = await this.checkForErrors();
       if (hasError) {
-        throw new Error('決済処理でエラーが発生しました');
+        const errorText = await this.getErrorText();
+        throw new Error(`決済処理エラー: ${errorText}`);
       }
+
+      // 成功確認（次のページに遷移したか確認）
+      await this.page.waitForTimeout(1000);
 
     } catch (error) {
       throw new Error(`決済実行エラー: ${error.message}`);
@@ -176,7 +233,7 @@ class ClickPostAutomation {
   }
 
   /**
-   * 入力フィールドに値を入力
+   * 入力フィールドに値を入力（単一セレクター）
    */
   async fillInput(selector, value) {
     try {
@@ -188,15 +245,75 @@ class ClickPostAutomation {
   }
 
   /**
+   * 複数セレクターを試して入力（カンマ区切りのセレクター対応）
+   */
+  async fillInputMulti(selectorString, value) {
+    const selectors = selectorString.split(',').map(s => s.trim());
+
+    for (const selector of selectors) {
+      try {
+        const element = await this.page.$(selector);
+        if (element) {
+          await element.fill(value);
+          return true;
+        }
+      } catch (error) {
+        // 次のセレクターを試す
+        continue;
+      }
+    }
+
+    console.warn(`入力フィールドが見つかりません: ${selectorString}`);
+    return false;
+  }
+
+  /**
+   * 複数セレクターを試してクリック（カンマ区切りのセレクター対応）
+   */
+  async clickMulti(selectorString) {
+    const selectors = selectorString.split(',').map(s => s.trim());
+
+    for (const selector of selectors) {
+      try {
+        const element = await this.page.$(selector);
+        if (element) {
+          await element.click();
+          return true;
+        }
+      } catch (error) {
+        // 次のセレクターを試す
+        continue;
+      }
+    }
+
+    throw new Error(`クリック可能な要素が見つかりません: ${selectorString}`);
+  }
+
+  /**
    * エラーチェック
    */
   async checkForErrors() {
     try {
-      // エラーメッセージの有無をチェック（実際のサイトに合わせて調整）
-      const errorElement = await this.page.$('.error-message, .alert-danger, [class*="error"]');
+      const errorElement = await this.page.$(this.selectors.errors.errorMessage);
       return errorElement !== null;
     } catch (error) {
       return false;
+    }
+  }
+
+  /**
+   * エラーメッセージテキストを取得
+   */
+  async getErrorText() {
+    try {
+      const errorElement = await this.page.$(this.selectors.errors.errorMessage);
+      if (errorElement) {
+        const text = await errorElement.textContent();
+        return text ? text.trim() : 'エラーが発生しました';
+      }
+      return 'エラーが発生しました';
+    } catch (error) {
+      return 'エラーが発生しました';
     }
   }
 
