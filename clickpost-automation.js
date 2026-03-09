@@ -12,44 +12,31 @@ class ClickPostAutomation {
     this.progressCallback = null;
     this.isStopped = false;
 
-    // セレクター設定を読み込む
+    // セレクター設定を読み込む（必須）
+    const selectorsPath = path.join(__dirname, 'clickpost-selectors.json');
+
     try {
-      const selectorsPath = path.join(__dirname, 'clickpost-selectors.json');
       const selectorsJson = fs.readFileSync(selectorsPath, 'utf-8');
       this.selectors = JSON.parse(selectorsJson);
     } catch (error) {
-      console.error('セレクター設定ファイルの読み込みエラー:', error);
-      // デフォルトのセレクターを使用
-      this.selectors = this.getDefaultSelectors();
-    }
-  }
+      const errorMessage = `
+========================================
+❌ エラー: clickpost-selectors.json が見つかりません
+========================================
 
-  /**
-   * デフォルトセレクター（フォールバック用）
-   */
-  getDefaultSelectors() {
-    return {
-      urls: {
-        mypage: 'https://clickpost.jp/mypage',
-        newLabel: 'https://clickpost.jp/mypage/new'
-      },
-      navigation: {
-        newLabelButton: 'a[href*="new"], a[href*="regist"]',
-        myPageIndicator: '#mypage, .mypage-container'
-      },
-      labelForm: {
-        postalCode: "input[name='postal_code'], input[name*='postal']",
-        recipientName: "input[name='recipient_name'], input[name*='name']",
-        address1: "input[name='address1'], textarea[name='address1']",
-        address2: "input[name='address2'], textarea[name='address2']",
-        address3: "input[name='address3'], textarea[name='address3']",
-        content: "input[name='content'], textarea[name='content']",
-        submitButton: "button[type='submit'], input[type='submit']"
-      },
-      errors: {
-        errorMessage: ".error-message, .alert-danger, [class*='error']"
-      }
-    };
+このファイルはクリックポスト自動化に必須です。
+
+対処方法:
+1. プロジェクトルートに clickpost-selectors.json があることを確認
+2. ファイルが削除されている場合は、CLICKPOST_SETUP.md を参照して再作成
+
+ファイルパス: ${selectorsPath}
+========================================
+      `.trim();
+
+      console.error(errorMessage);
+      throw new Error('clickpost-selectors.json が見つかりません。このファイルは必須です。');
+    }
   }
 
   /**
