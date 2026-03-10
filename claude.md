@@ -11,6 +11,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 開発コマンド
 
 ```bash
+# 依存関係インストール
+npm install
+
+# Playwrightブラウザインストール（クリックポスト機能に必要）
+npx playwright install chromium
+
 # 開発環境で実行
 npm start
 
@@ -100,7 +106,7 @@ onClickPostProgress(callback) → void  // IPC イベントリスナー (clickpo
 
 ### ポータブルビルド対応
 
-データファイルの読み込み優先順位（[main.js:13-37](main.js#L13-L37)）:
+データファイルの読み込み優先順位（[main.js:8-30](main.js#L8-L30)）:
 
 1. **ビルド時**: `exe同じフォルダのdata/`
 2. **開発時**: `プロジェクトルートのdata/`
@@ -119,8 +125,8 @@ onClickPostProgress(callback) → void  // IPC イベントリスナー (clickpo
 - 固定検索条件: ステータス（保留中/確認/一部発送）、確認済み、キャンセルなし、入金済み
 - **40行以下**: 単一CSV
 - **41行以上**: 自動分割（`_1.csv`, `_2.csv`...）
-- 住所を20文字×4行に分割（[renderer.js:287](renderer.js#L287) `splitAddress`）
-- 重複配送先に`◎`マーク付与（[renderer.js:363](renderer.js#L363)）
+- 住所を20文字×4行に分割（[renderer.js:325](renderer.js#L325) `splitAddress`）
+- 重複配送先に`◎`マーク付与（[renderer.js:398](renderer.js#L398)）
 - Shift_JISエンコード（`iconv-lite`使用）
 
 ### 2. マスタ設定（マスタ設定タブ）
@@ -158,42 +164,47 @@ onClickPostProgress(callback) → void  // IPC イベントリスナー (clickpo
 - **Context Isolation**: 有効
 - **Node Integration**: 無効
 - **CSP**: `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'`
-- **XSS防止**: `escapeHtml`関数実装（[renderer.js:9](renderer.js#L9)）
+- **XSS防止**: `escapeHtml`関数実装（[renderer.js:190](renderer.js#L190)）
 
 ## 開発時のポイント
 
 ### イベント委譲パターン
 
-マスタテーブルのボタン処理は委譲で実装（[renderer.js:430-459](renderer.js#L430-L459)）:
+マスタテーブルのボタン処理は委譲で実装（[renderer.js:68-75](renderer.js#L68-L75)）:
 
 ```javascript
 document.getElementById('master-table-body').addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-action]');
   if (!btn) return;
-  const action = btn.dataset.action;
-  const code = btn.closest('tr').dataset.code;
-  // ...
+  const { action, code, name } = btn.dataset;
+  if (action === 'edit')   editMaster(code, name);
+  if (action === 'delete') deleteMaster(code);
 });
 ```
 
 ### トークンリフレッシュ
 
-`nextengine-api.js`でAPI通信時に自動でトークンを更新（[nextengine-api.js:200-205](nextengine-api.js#L200-L205)）:
+`nextengine-api.js`でAPI通信時に自動でトークンを更新（[nextengine-api.js:240-245](nextengine-api.js#L240-L245)）:
 
 ```javascript
-// レスポンスヘッダーから新トークンを取得して保存
-if (data.access_token) {
-  // mainプロセスへ保存依頼
+// レスポンスから新トークンを取得して保存
+if (result.access_token && result.refresh_token) {
+  auth.access_token = result.access_token;
+  auth.refresh_token = result.refresh_token;
+  saveAuthData(auth);
 }
 ```
 
 ### CSV分割ロジック
 
-40行超の場合、自動分割（[renderer.js:377-451](renderer.js#L377-L451)）:
+40行超の場合、自動分割（[renderer.js:402-430](renderer.js#L402-L430)）:
 
 ```javascript
-if (rows.length > 40) {
-  // ファイル名に _1, _2 を付与
+const MAX_ROWS_PER_FILE = 40;
+if (rows.length <= MAX_ROWS_PER_FILE) {
+  // 単一ファイル保存
+} else {
+  // ファイル名に _1, _2 を付与して分割保存
 }
 ```
 
