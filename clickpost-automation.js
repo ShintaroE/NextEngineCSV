@@ -69,10 +69,12 @@ class ClickPostAutomation {
       this.sendProgress(0, csvData.length, 'ブラウザを起動しています...', 'info');
 
       // ブラウザを起動（ユーザーに見せる）
-      this.browser = await chromium.launch({
-        headless: false,
-        slowMo: 100  // 操作を少しゆっくりに（人間らしく）
-      });
+      // システムインストール済みブラウザを使用（Chrome → Edge の順にフォールバック）
+      try {
+        this.browser = await chromium.launch({ channel: 'chrome', headless: false, slowMo: 100 });
+      } catch (e) {
+        this.browser = await chromium.launch({ channel: 'msedge', headless: false, slowMo: 100 });
+      }
 
       this.page = await this.browser.newPage();
 
