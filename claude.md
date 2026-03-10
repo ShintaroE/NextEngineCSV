@@ -29,15 +29,16 @@ npm run build
 
 ```
 [UI Layer]
-  ├─ index.html (497行) - レイアウト・スタイル
-  └─ renderer.js (619行) - UIロジック、タブ管理、CSV生成
+  ├─ index.html - レイアウト・スタイル
+  └─ renderer.js - UIロジック、タブ管理、CSV生成
          ↓ IPC通信
 [Main Process Layer]
-  ├─ preload.js (36行) - セキュアなAPI公開層
-  └─ main.js (364行) - IPCハンドラー、ファイルI/O、OAuth認証
+  ├─ preload.js - セキュアなAPI公開層
+  └─ main.js - IPCハンドラー、ファイルI/O、OAuth認証
          ↓
 [API/Data Layer]
-  ├─ nextengine-api.js (402行) - ネクストエンジンAPI通信、ログ管理
+  ├─ nextengine-api.js - ネクストエンジンAPI通信、ログ管理
+  ├─ clickpost-automation.js - Playwright自動化（遅延ロード: 初回呼び出し時のみ require）
   └─ data/*.json - 永続化データ（認証情報、マスタ）
 ```
 
@@ -87,6 +88,12 @@ clearLogs() → Promise<void>
 // ダイアログ
 showConfirm(message) → Promise<boolean>
 showAlert(message) → Promise<void>
+
+// クリックポスト自動化
+loadClickPostCsv() → Promise<{success, data, fileName, rowCount}>
+startClickPostAutomation(csvData) → Promise<{success}>
+stopClickPostAutomation() → Promise<{success}>
+onClickPostProgress(callback) → void  // IPC イベントリスナー (clickpost:progress)
 ```
 
 ## データファイル管理
@@ -102,7 +109,8 @@ showAlert(message) → Promise<void>
 ### データファイル
 
 - `data/auth.json` - 認証情報（client_id, client_secret, access_token, refresh_token）
-- `data/master-data.json` - 商品マスタ（`[{code, name}, ...]`形式）
+- `data/master-data.json` - 商品マスタ（`{masters: [{code, name}, ...]}`形式）
+- `data/demo-data.json` - デモ用注文データ（開発/テスト用、`{orders: [...]}`形式）
 
 ## 主要機能
 
