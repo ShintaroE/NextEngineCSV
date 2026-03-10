@@ -688,12 +688,12 @@ function showPreview(data) {
     const postalCode = row['お届け先郵便番号'] || row['郵便番号'] || '';
     const name = row['お届け先氏名'] || row['氏名'] || '';
     const address = [
-      row['お届け先住所1'] || row['住所1'] || '',
-      row['お届け先住所2'] || row['住所2'] || '',
-      row['お届け先住所3'] || row['住所3'] || '',
-      row['お届け先住所4'] || row['住所4'] || ''
+      row['お届け先住所1行目'] || row['お届け先住所1'] || row['住所1'] || '',
+      row['お届け先住所2行目'] || row['お届け先住所2'] || row['住所2'] || '',
+      row['お届け先住所3行目'] || row['お届け先住所3'] || row['住所3'] || '',
+      row['お届け先住所4行目'] || row['お届け先住所4'] || row['住所4'] || ''
     ].filter(a => a).join(' ');
-    const productName = row['商品名'] || '';
+    const productName = row['内容品'] || row['商品名'] || '';
 
     return `<tr>
       <td>${index + 1}</td>

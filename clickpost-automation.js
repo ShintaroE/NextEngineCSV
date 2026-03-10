@@ -170,25 +170,25 @@ class ClickPostAutomation {
     }
 
     // 住所1（都道府県・市区町村）
-    const address1 = row['お届け先住所1'] || row['住所1'] || '';
+    const address1 = row['お届け先住所1行目'] || row['お届け先住所1'] || row['住所1'] || '';
     if (address1) {
       await this.fillInputMulti(this.selectors.labelForm.address1, address1);
     }
 
     // 住所2（町域・番地）
-    const address2 = row['お届け先住所2'] || row['住所2'] || '';
+    const address2 = row['お届け先住所2行目'] || row['お届け先住所2'] || row['住所2'] || '';
     if (address2) {
       await this.fillInputMulti(this.selectors.labelForm.address2, address2);
     }
 
     // 住所3（建物名等）
-    const address3 = row['お届け先住所3'] || row['住所3'] || '';
+    const address3 = row['お届け先住所3行目'] || row['お届け先住所3'] || row['住所3'] || '';
     if (address3) {
       await this.fillInputMulti(this.selectors.labelForm.address3, address3);
     }
 
     // 内容品（商品名）
-    const productName = row['商品名'] || '';
+    const productName = row['内容品'] || row['商品名'] || '';
     if (productName) {
       await this.fillInputMulti(this.selectors.labelForm.content, productName);
     }
