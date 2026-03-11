@@ -1,6 +1,8 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
+const iconv = require('iconv-lite');
 
 /**
  * クリックポスト自動決済クラス
@@ -11,6 +13,7 @@ class ClickPostAutomation {
     this.page = null;
     this.progressCallback = null;
     this.isStopped = false;
+    this.tempFilePath = null;
 
     // セレクター設定を読み込む（必須）
     const selectorsPath = path.join(__dirname, 'clickpost-selectors.json');
@@ -66,10 +69,12 @@ class ClickPostAutomation {
   async start(csvData) {
     try {
       this.isStopped = false;
-      this.sendProgress(0, csvData.length, 'ブラウザを起動しています...', 'info');
+      const total = csvData.length;
+
+      // ========== Phase 1: 初期化 ==========
+      this.sendProgress(0, total, 'ブラウザを起動しています...', 'info');
 
       // ブラウザを起動（ユーザーに見せる）
-      // システムインストール済みブラウザを使用（Chrome → Edge の順にフォールバック）
       try {
         this.browser = await chromium.launch({ channel: 'chrome', headless: false, slowMo: 100 });
       } catch (e) {
@@ -79,14 +84,12 @@ class ClickPostAutomation {
       this.page = await this.browser.newPage();
 
       // クリックポストサイトにアクセス
-      this.sendProgress(0, csvData.length, 'クリックポストサイトにアクセスしています...', 'info');
+      this.sendProgress(0, total, 'クリックポストサイトにアクセスしています...', 'info');
       await this.page.goto('https://clickpost.jp/');
 
-      // ログイン画面が表示されたら待機
-      this.sendProgress(0, csvData.length, 'ログインしてください（手動）', 'info');
+      // ログイン待機（手動）
+      this.sendProgress(0, total, 'ログインしてください（手動）', 'info');
 
-      // ログイン後のページを待機（ユーザーが手動でログイン）
-      // マイページのURLまたは要素を待機
       try {
         await Promise.race([
           this.page.waitForURL('**/mypage/**', { timeout: 300000 }),
@@ -96,22 +99,40 @@ class ClickPostAutomation {
         throw new Error('ログインタイムアウト。5分以内にログインしてください。');
       }
 
-      this.sendProgress(0, csvData.length, 'ログイン完了。処理を開始します...', 'success');
+      this.sendProgress(0, total, 'ログイン完了。CSVアップロードを開始します...', 'success');
 
-      // 各行を処理
-      for (let i = 0; i < csvData.length; i++) {
+      // ========== Phase 2: CSVアップロード ==========
+      // 一時CSVファイルを作成
+      this.sendProgress(0, total, 'CSVファイルを準備しています...', 'info');
+      await this.createTempCsvFile(csvData);
+
+      // まとめ申込ページに移動
+      this.sendProgress(0, total, 'まとめ申込ページに移動しています...', 'info');
+      await this.navigateToBulkUpload();
+
+      // CSVをアップロード
+      this.sendProgress(0, total, 'CSVファイルをアップロードしています...', 'info');
+      await this.uploadCsvFile();
+
+      // 取込を実行
+      this.sendProgress(0, total, 'データを取り込んでいます...', 'info');
+      await this.confirmUpload();
+
+      this.sendProgress(0, total, 'CSV取込完了。決済処理を開始します...', 'success');
+
+      // ========== Phase 3: 決済処理 ==========
+      for (let i = 0; i < total; i++) {
         if (this.isStopped) {
-          this.sendProgress(i, csvData.length, '処理が停止されました', 'error');
+          this.sendProgress(i, total, '処理が停止されました', 'error');
           break;
         }
 
-        const row = csvData[i];
-
         try {
-          await this.processRow(row, i + 1, csvData.length);
-          this.sendProgress(i + 1, csvData.length, `${i + 1}件目: ${row['お届け先氏名'] || ''}の処理が完了しました`, 'success');
+          await this.processPayment(i + 1, total);
+          const name = csvData[i]['お届け先氏名'] || csvData[i]['氏名'] || '';
+          this.sendProgress(i + 1, total, `${i + 1}件目: ${name}の決済が完了しました`, 'success');
         } catch (error) {
-          this.sendProgress(i + 1, csvData.length, `${i + 1}件目: エラー - ${error.message}`, 'error');
+          this.sendProgress(i + 1, total, `${i + 1}件目: エラー - ${error.message}`, 'error');
           // エラーが発生しても次の行に進む
         }
 
@@ -119,12 +140,15 @@ class ClickPostAutomation {
         await this.page.waitForTimeout(1000);
       }
 
-      this.sendProgress(csvData.length, csvData.length, 'すべての処理が完了しました！', 'success');
+      this.sendProgress(total, total, 'すべての処理が完了しました！', 'success');
 
     } catch (error) {
       this.sendProgress(0, csvData.length, `エラーが発生しました: ${error.message}`, 'error');
       throw error;
     } finally {
+      // 一時ファイルを削除
+      this.cleanupTempFile();
+
       // ブラウザを閉じる
       if (this.browser) {
         await this.browser.close();
@@ -135,89 +159,186 @@ class ClickPostAutomation {
   }
 
   /**
-   * 1行を処理（1件のクリックポスト登録）
+   * 一時CSVファイルを作成（クリックポスト形式、Shift-JIS）
    */
-  async processRow(row, currentIndex, total) {
-    this.sendProgress(currentIndex - 1, total, `${currentIndex}件目: 登録フォームを開いています...`, 'info');
+  async createTempCsvFile(csvData) {
+    const tempDir = os.tmpdir();
+    this.tempFilePath = path.join(tempDir, `clickpost_upload_${Date.now()}.csv`);
 
-    // 新規作成ボタンをクリックまたは直接URLに移動
-    try {
-      const newLabelButton = await this.page.$(this.selectors.navigation.newLabelButton);
-      if (newLabelButton) {
-        await newLabelButton.click();
-      } else {
-        // ボタンが見つからない場合は直接URLに移動
-        await this.page.goto(this.selectors.urls.newLabel || 'https://clickpost.jp/mypage/new');
+    // クリックポストCSVヘッダー
+    const headers = [
+      'お届け先郵便番号',
+      'お届け先氏名',
+      'お届け先敬称',
+      'お届け先住所1行目',
+      'お届け先住所2行目',
+      'お届け先住所3行目',
+      'お届け先住所4行目',
+      '内容品'
+    ];
+
+    // データ行を生成
+    const rows = csvData.map(row => {
+      const fields = [
+        (row['お届け先郵便番号'] || row['郵便番号'] || '').replace(/-/g, ''),
+        row['お届け先氏名'] || row['氏名'] || '',
+        row['お届け先敬称'] || '様',
+        row['お届け先住所1行目'] || row['お届け先住所1'] || row['住所1'] || '',
+        row['お届け先住所2行目'] || row['お届け先住所2'] || row['住所2'] || '',
+        row['お届け先住所3行目'] || row['お届け先住所3'] || row['住所3'] || '',
+        row['お届け先住所4行目'] || row['お届け先住所4'] || row['住所4'] || '',
+        row['内容品'] || row['商品名'] || ''
+      ];
+      // CSVエスケープ（ダブルクォートで囲む）
+      return fields.map(f => `"${String(f).replace(/"/g, '""')}"`).join(',');
+    });
+
+    // CSV文字列を作成
+    const csvContent = [headers.join(','), ...rows].join('\r\n');
+
+    // Shift-JISで保存
+    const sjisBuffer = iconv.encode(csvContent, 'Shift_JIS');
+    fs.writeFileSync(this.tempFilePath, sjisBuffer);
+
+    return this.tempFilePath;
+  }
+
+  /**
+   * まとめ申込ページに移動
+   */
+  async navigateToBulkUpload() {
+    const bulkUploadUrl = this.selectors.urls.bulkUpload || 'https://clickpost.jp/mypage/import';
+    await this.page.goto(bulkUploadUrl);
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
+   * CSVファイルをアップロード
+   */
+  async uploadCsvFile() {
+    if (!this.tempFilePath) {
+      throw new Error('一時CSVファイルが作成されていません');
+    }
+
+    // ファイル入力要素を探してファイルを設定
+    const fileInputSelector = this.selectors.bulkUpload.fileInput;
+    const selectors = fileInputSelector.split(',').map(s => s.trim());
+
+    let uploaded = false;
+    for (const selector of selectors) {
+      try {
+        const fileInput = await this.page.$(selector);
+        if (fileInput) {
+          await fileInput.setInputFiles(this.tempFilePath);
+          uploaded = true;
+          break;
+        }
+      } catch (error) {
+        continue;
       }
+    }
+
+    if (!uploaded) {
+      throw new Error('ファイル入力フィールドが見つかりません');
+    }
+
+    // アップロードボタンをクリック（存在する場合）
+    await this.page.waitForTimeout(500);
+    try {
+      await this.clickMulti(this.selectors.bulkUpload.uploadButton);
     } catch (error) {
-      // エラー時は直接URLに移動
-      await this.page.goto(this.selectors.urls.newLabel || 'https://clickpost.jp/mypage/new');
+      // アップロードボタンがない場合はファイル選択で自動送信されることもある
+      console.log('アップロードボタンが見つかりません（自動送信の可能性）');
+    }
+
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
+   * 取込を実行
+   */
+  async confirmUpload() {
+    // 取込確認ボタンをクリック
+    try {
+      await this.clickMulti(this.selectors.bulkUpload.confirmImportButton);
+      await this.page.waitForLoadState('networkidle');
+    } catch (error) {
+      // ボタンが見つからない場合は既に取込済みの可能性
+      console.log('取込確認ボタンが見つかりません');
+    }
+
+    // エラーチェック
+    const hasError = await this.checkForErrors();
+    if (hasError) {
+      const errorText = await this.getErrorText();
+      throw new Error(`CSV取込エラー: ${errorText}`);
+    }
+
+    await this.page.waitForTimeout(1000);
+  }
+
+  /**
+   * 1件の決済を処理
+   */
+  async processPayment(currentIndex, total) {
+    this.sendProgress(currentIndex - 1, total, `${currentIndex}件目: 決済ボタンを探しています...`, 'info');
+
+    // 決済一覧から「お支払い手続きへ」ボタンを探してクリック
+    const paymentButtonSelector = this.selectors.paymentList.paymentButton;
+    const selectors = paymentButtonSelector.split(',').map(s => s.trim());
+
+    let clicked = false;
+    for (const selector of selectors) {
+      try {
+        // 最初の未決済行の決済ボタンをクリック
+        const buttons = await this.page.$$(selector);
+        if (buttons.length > 0) {
+          await buttons[0].click();
+          clicked = true;
+          break;
+        }
+      } catch (error) {
+        continue;
+      }
+    }
+
+    if (!clicked) {
+      throw new Error('決済ボタンが見つかりません');
     }
 
     await this.page.waitForLoadState('networkidle');
 
-    // フォームに入力
-    this.sendProgress(currentIndex - 1, total, `${currentIndex}件目: 送り先情報を入力しています...`, 'info');
-
-    // 郵便番号
-    const postalCode = row['お届け先郵便番号'] || row['郵便番号'] || '';
-    if (postalCode) {
-      await this.fillInputMulti(this.selectors.labelForm.postalCode, postalCode);
-    }
-
-    // 氏名
-    const name = row['お届け先氏名'] || row['氏名'] || '';
-    if (name) {
-      await this.fillInputMulti(this.selectors.labelForm.recipientName, name);
-    }
-
-    // 住所1（都道府県・市区町村）
-    const address1 = row['お届け先住所1行目'] || row['お届け先住所1'] || row['住所1'] || '';
-    if (address1) {
-      await this.fillInputMulti(this.selectors.labelForm.address1, address1);
-    }
-
-    // 住所2（町域・番地）
-    const address2 = row['お届け先住所2行目'] || row['お届け先住所2'] || row['住所2'] || '';
-    if (address2) {
-      await this.fillInputMulti(this.selectors.labelForm.address2, address2);
-    }
-
-    // 住所3（建物名等）
-    const address3 = row['お届け先住所3行目'] || row['お届け先住所3'] || row['住所3'] || '';
-    if (address3) {
-      await this.fillInputMulti(this.selectors.labelForm.address3, address3);
-    }
-
-    // 内容品（商品名）
-    const productName = row['内容品'] || row['商品名'] || '';
-    if (productName) {
-      await this.fillInputMulti(this.selectors.labelForm.content, productName);
-    }
-
-    // 少し待機（フォーム検証のため）
-    await this.page.waitForTimeout(500);
-
-    // 決済ボタンをクリック
-    this.sendProgress(currentIndex - 1, total, `${currentIndex}件目: 決済を実行しています...`, 'info');
+    // 決済確認ページで「支払手続き確定」をクリック
+    this.sendProgress(currentIndex - 1, total, `${currentIndex}件目: 支払いを確定しています...`, 'info');
 
     try {
-      // 決済ボタンをクリック
-      await this.clickMulti(this.selectors.labelForm.submitButton);
-      await this.page.waitForLoadState('networkidle', { timeout: 10000 });
-
-      // エラーチェック
-      const hasError = await this.checkForErrors();
-      if (hasError) {
-        const errorText = await this.getErrorText();
-        throw new Error(`決済処理エラー: ${errorText}`);
-      }
-
-      // 成功確認（次のページに遷移したか確認）
-      await this.page.waitForTimeout(1000);
-
+      await this.clickMulti(this.selectors.paymentList.paymentConfirmButton);
+      await this.page.waitForLoadState('networkidle');
     } catch (error) {
-      throw new Error(`決済実行エラー: ${error.message}`);
+      throw new Error(`決済確定エラー: ${error.message}`);
+    }
+
+    // エラーチェック
+    const hasError = await this.checkForErrors();
+    if (hasError) {
+      const errorText = await this.getErrorText();
+      throw new Error(`決済処理エラー: ${errorText}`);
+    }
+
+    await this.page.waitForTimeout(500);
+  }
+
+  /**
+   * 一時ファイルを削除
+   */
+  cleanupTempFile() {
+    if (this.tempFilePath && fs.existsSync(this.tempFilePath)) {
+      try {
+        fs.unlinkSync(this.tempFilePath);
+      } catch (error) {
+        console.warn('一時ファイル削除エラー:', error);
+      }
+      this.tempFilePath = null;
     }
   }
 
@@ -311,6 +432,10 @@ class ClickPostAutomation {
    */
   async stop() {
     this.isStopped = true;
+
+    // 一時ファイルを削除
+    this.cleanupTempFile();
+
     if (this.browser) {
       await this.browser.close();
       this.browser = null;

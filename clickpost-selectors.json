@@ -8,6 +8,7 @@
     "login": "https://login.yahoo.co.jp/config/login",
     "mypage": "https://clickpost.jp/mypage",
     "newLabel": "https://clickpost.jp/mypage/new",
+    "bulkUpload": "https://clickpost.jp/mypage/import",
     "multiplePayment": "https://clickpost.jp/labels/multiple_payment"
   },
 
@@ -43,5 +44,22 @@
   "errors": {
     "errorMessage": ".error-message, .alert-danger, [class*='error'], .alert-error",
     "validationError": ".field_with_errors, .has-error, [class*='invalid']"
+  },
+
+  "bulkUpload": {
+    "note": "まとめ申込（CSVアップロード）ページのセレクター（要調整）",
+    "fileInput": "input[type='file'], input[name*='file'], input[name*='csv']",
+    "uploadButton": "button[type='submit'], input[type='submit'], .btn-upload",
+    "confirmImportButton": "button[type='submit'], input[type='submit'], .btn-confirm, .btn-primary",
+    "successMessage": ".alert-success, .success-message, [class*='success']",
+    "importResultTable": "table, .import-result, .result-table"
+  },
+
+  "paymentList": {
+    "note": "まとめ申込後の一覧ページのセレクター（要調整）",
+    "listTable": "table, .label-list, .payment-list",
+    "dataRows": "tbody tr, .data-row",
+    "paymentButton": "a[href*='payment'], button[data-action='payment'], .btn-payment, input[value*='支払'], a:has-text('支払')",
+    "paymentConfirmButton": "button[type='submit'], input[type='submit'], #payment_complete, .btn-confirm"
   }
 }
