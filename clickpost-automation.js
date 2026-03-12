@@ -74,14 +74,36 @@ class ClickPostAutomation {
       // ========== Phase 1: 初期化 ==========
       this.sendProgress(0, total, 'ブラウザを起動しています...', 'info');
 
-      // ブラウザを起動（ユーザーに見せる）
+      // 既存のChromeプロファイルを使用してブラウザを起動
+      // 注意: Chromeが起動中の場合は終了してから実行してください
+      const userDataDir = path.join(os.homedir(), 'AppData', 'Local', 'Google', 'Chrome', 'User Data');
+
+      // 自動化検知を回避するオプション
+      const launchOptions = {
+        channel: 'chrome',
+        headless: false,
+        slowMo: 100,
+        args: [
+          '--disable-blink-features=AutomationControlled',
+          '--disable-automation',
+          '--no-first-run'
+        ],
+        ignoreDefaultArgs: ['--enable-automation']
+      };
+
       try {
-        this.browser = await chromium.launch({ channel: 'chrome', headless: false, slowMo: 100 });
+        this.browser = await chromium.launchPersistentContext(userDataDir, launchOptions);
       } catch (e) {
-        this.browser = await chromium.launch({ channel: 'msedge', headless: false, slowMo: 100 });
+        // Chromeが使えない場合はEdgeのプロファイルを試す
+        const edgeUserDataDir = path.join(os.homedir(), 'AppData', 'Local', 'Microsoft', 'Edge', 'User Data');
+        this.browser = await chromium.launchPersistentContext(edgeUserDataDir, {
+          ...launchOptions,
+          channel: 'msedge'
+        });
       }
 
-      this.page = await this.browser.newPage();
+      // 既存のページを使うか、新しいページを作成
+      this.page = this.browser.pages()[0] || await this.browser.newPage();
 
       // クリックポストサイトにアクセス
       this.sendProgress(0, total, 'クリックポストサイトにアクセスしています...', 'info');
