@@ -48,9 +48,9 @@
   },
 
   "bulkUpload": {
-    "note": "まとめ申込（CSVアップロード）ページのセレクター（要調整）",
-    "fileInput": "input[type='file'], input[name*='file'], input[name*='csv']",
-    "uploadButton": "button[type='submit'], input[type='submit'], .btn-upload",
+    "note": "まとめ申込（CSVアップロード）ページのセレクター",
+    "fileInput": "input#file-upload-button, input[type='file']",
+    "nextButton": "input[value='次へ'], button:has-text('次へ')",
     "confirmImportButton": "button[type='submit'], input[type='submit'], .btn-confirm, .btn-primary",
     "successMessage": ".alert-success, .success-message, [class*='success']",
     "importResultTable": "table, .import-result, .result-table"

@@ -242,15 +242,9 @@ class ClickPostAutomation {
       throw new Error('ファイル入力フィールドが見つかりません');
     }
 
-    // アップロードボタンをクリック（存在する場合）
+    // 「次へ」ボタンをクリック
     await this.page.waitForTimeout(500);
-    try {
-      await this.clickMulti(this.selectors.bulkUpload.uploadButton);
-    } catch (error) {
-      // アップロードボタンがない場合はファイル選択で自動送信されることもある
-      console.log('アップロードボタンが見つかりません（自動送信の可能性）');
-    }
-
+    await this.clickMulti(this.selectors.bulkUpload.nextButton);
     await this.page.waitForLoadState('networkidle');
   }
 
