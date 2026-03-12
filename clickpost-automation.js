@@ -270,38 +270,17 @@ class ClickPostAutomation {
    * 1件の決済を処理
    */
   async processPayment(currentIndex, total) {
-    this.sendProgress(currentIndex - 1, total, `${currentIndex}件目: 決済ボタンを探しています...`, 'info');
+    this.sendProgress(currentIndex - 1, total, `${currentIndex}件目: Amazon Pay決済ボタンを探しています...`, 'info');
 
-    // 決済一覧から「お支払い手続きへ」ボタンを探してクリック
-    const paymentButtonSelector = this.selectors.paymentList.paymentButton;
-    const selectors = paymentButtonSelector.split(',').map(s => s.trim());
-
-    let clicked = false;
-    for (const selector of selectors) {
-      try {
-        // 最初の未決済行の決済ボタンをクリック
-        const buttons = await this.page.$$(selector);
-        if (buttons.length > 0) {
-          await buttons[0].click();
-          clicked = true;
-          break;
-        }
-      } catch (error) {
-        continue;
-      }
-    }
-
-    if (!clicked) {
-      throw new Error('決済ボタンが見つかりません');
-    }
-
+    // 「Amazonアカウントでお支払い」ボタンをクリック
+    await this.clickMulti(this.selectors.paymentList.amazonPayButton);
     await this.page.waitForLoadState('networkidle');
 
     // 決済確認ページで「支払手続き確定」をクリック
     this.sendProgress(currentIndex - 1, total, `${currentIndex}件目: 支払いを確定しています...`, 'info');
 
     try {
-      await this.clickMulti(this.selectors.paymentList.paymentConfirmButton);
+      //await this.clickMulti(this.selectors.paymentList.paymentConfirmButton);
       await this.page.waitForLoadState('networkidle');
     } catch (error) {
       throw new Error(`決済確定エラー: ${error.message}`);

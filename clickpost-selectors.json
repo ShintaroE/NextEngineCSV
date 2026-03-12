@@ -57,10 +57,10 @@
   },
 
   "paymentList": {
-    "note": "まとめ申込後の一覧ページのセレクター（要調整）",
+    "note": "まとめ申込 支払手続き画面のセレクター",
     "listTable": "table, .label-list, .payment-list",
     "dataRows": "tbody tr, .data-row",
-    "paymentButton": "a[href*='payment'], button[data-action='payment'], .btn-payment, input[value*='支払'], a:has-text('支払')",
+    "amazonPayButton": "div.amazonpay-button-view1, div.amazonpay-button-view1-gold",
     "paymentConfirmButton": "button[type='submit'], input[type='submit'], #payment_complete, .btn-confirm"
   }
 }
