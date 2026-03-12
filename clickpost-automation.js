@@ -249,17 +249,12 @@ class ClickPostAutomation {
   }
 
   /**
-   * 取込を実行
+   * 取込を実行（内容確認画面で「次へ」をクリック）
    */
   async confirmUpload() {
-    // 取込確認ボタンをクリック
-    try {
-      await this.clickMulti(this.selectors.bulkUpload.confirmImportButton);
-      await this.page.waitForLoadState('networkidle');
-    } catch (error) {
-      // ボタンが見つからない場合は既に取込済みの可能性
-      console.log('取込確認ボタンが見つかりません');
-    }
+    // 「次へ」ボタンをクリック
+    await this.clickMulti(this.selectors.bulkUpload.nextButton);
+    await this.page.waitForLoadState('networkidle');
 
     // エラーチェック
     const hasError = await this.checkForErrors();
