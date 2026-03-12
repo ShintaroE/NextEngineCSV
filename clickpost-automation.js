@@ -204,11 +204,11 @@ class ClickPostAutomation {
   }
 
   /**
-   * まとめ申込ページに移動
+   * まとめ申込ページに移動（「まとめ申込」ボタンをクリック）
    */
   async navigateToBulkUpload() {
-    const bulkUploadUrl = this.selectors.urls.bulkUpload || 'https://clickpost.jp/mypage/import';
-    await this.page.goto(bulkUploadUrl);
+    // 「まとめ申込」ボタンをクリック
+    await this.clickMulti(this.selectors.navigation.bulkUploadButton);
     await this.page.waitForLoadState('networkidle');
   }
 

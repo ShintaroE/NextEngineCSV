@@ -38,6 +38,7 @@
 
   "navigation": {
     "newLabelButton": "a[href*='new'], a[href*='regist'], .btn-new-label",
+    "bulkUploadButton": "input[value='まとめ申込'], input.navi_button[value='まとめ申込']",
     "myPageIndicator": "#mypage, .mypage-container, [class*='mypage']"
   },
 
