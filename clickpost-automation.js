@@ -330,10 +330,10 @@ class ClickPostAutomation {
    * 1件の決済を処理
    */
   async processPayment(currentIndex, total) {
-    this.sendProgress(currentIndex - 1, total, `${currentIndex}件目: Amazon Pay決済ボタンを探しています...`, 'info');
+    this.sendProgress(currentIndex - 1, total, `${currentIndex}件目: Yahoo!ウォレット決済ボタンを探しています...`, 'info');
 
-    // 「Amazonアカウントでお支払い」ボタンをクリック
-    await this.clickMulti(this.selectors.paymentList.amazonPayButton);
+    // 「お支払い手続きへ」ボタンをクリック（Yahoo!ウォレット）
+    await this.clickMulti(this.selectors.paymentList.yahooWalletButton);
     await this.page.waitForLoadState('networkidle');
 
     // 決済確認ページで「支払手続き確定」をクリック
