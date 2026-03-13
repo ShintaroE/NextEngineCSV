@@ -50,6 +50,30 @@ class ClickPostAutomation {
   }
 
   /**
+   * ブラウザプロファイルのパスを取得
+   * ポータブルビルド対応（main.jsのgetDataPath()と同様のロジック）
+   */
+  getBrowserProfilePath() {
+    // 1. exe同じフォルダ（ビルド時）
+    const exeDir = path.dirname(process.execPath);
+    const portablePath = path.join(exeDir, 'browser-profile');
+    // node_modulesを含まない場合はビルド環境と判断
+    if (!exeDir.includes('node_modules')) {
+      // ビルド時: exeと同じフォルダにbrowser-profileを作成
+      // ただし、開発時（node.exeの場所）の場合は除外
+      const isDevEnvironment = exeDir.toLowerCase().includes('nodejs') ||
+                                exeDir.toLowerCase().includes('node');
+      if (!isDevEnvironment) {
+        return portablePath;
+      }
+    }
+
+    // 2. プロジェクトルート（開発時）
+    const devPath = path.join(__dirname, 'browser-profile');
+    return devPath;
+  }
+
+  /**
    * 進行状況を送信
    */
   sendProgress(current, total, message, status = 'info') {
@@ -74,13 +98,17 @@ class ClickPostAutomation {
       // ========== Phase 1: 初期化 ==========
       this.sendProgress(0, total, 'ブラウザを起動しています...', 'info');
 
-      // 既存のChromeプロファイルを使用してブラウザを起動
-      // 注意: Chromeが起動中の場合は終了してから実行してください
-      const userDataDir = path.join(os.homedir(), 'AppData', 'Local', 'Google', 'Chrome', 'User Data');
+      // アプリ専用プロファイルを使用してブラウザを起動
+      // 初回起動時はYahoo/Amazonへのログインが必要です
+      const profilePath = this.getBrowserProfilePath();
+
+      // プロファイルディレクトリを作成（存在しない場合）
+      if (!fs.existsSync(profilePath)) {
+        fs.mkdirSync(profilePath, { recursive: true });
+      }
 
       // 自動化検知を回避するオプション
       const launchOptions = {
-        channel: 'chrome',
         headless: false,
         slowMo: 100,
         args: [
@@ -92,14 +120,24 @@ class ClickPostAutomation {
       };
 
       try {
-        this.browser = await chromium.launchPersistentContext(userDataDir, launchOptions);
-      } catch (e) {
-        // Chromeが使えない場合はEdgeのプロファイルを試す
-        const edgeUserDataDir = path.join(os.homedir(), 'AppData', 'Local', 'Microsoft', 'Edge', 'User Data');
-        this.browser = await chromium.launchPersistentContext(edgeUserDataDir, {
+        // 1. 既存Chrome使用を試行
+        this.browser = await chromium.launchPersistentContext(profilePath, {
           ...launchOptions,
-          channel: 'msedge'
+          channel: 'chrome'
         });
+      } catch (e1) {
+        console.log('Chrome起動失敗、Edgeを試します:', e1.message);
+        try {
+          // 2. Edge使用を試行
+          this.browser = await chromium.launchPersistentContext(profilePath, {
+            ...launchOptions,
+            channel: 'msedge'
+          });
+        } catch (e2) {
+          console.log('Edge起動失敗、Playwright内蔵Chromiumを使用します:', e2.message);
+          // 3. Playwright内蔵Chromiumを使用
+          this.browser = await chromium.launchPersistentContext(profilePath, launchOptions);
+        }
       }
 
       // 既存のページを使うか、新しいページを作成
