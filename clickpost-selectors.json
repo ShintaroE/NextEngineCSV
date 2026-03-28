@@ -61,6 +61,7 @@
     "listTable": "table, .label-list, .payment-list",
     "dataRows": "tbody tr, .data-row",
     "yahooWalletButton": "input.ywallet_button, input[name^='wallet_button']",
-    "paymentConfirmButton": "button[type='submit'], input[type='submit'], #payment_complete, .btn-confirm"
+    "paymentConfirmButton": "button[type='submit'], input[type='submit'], #payment_complete, .btn-confirm",
+    "yahooPaymentConfirmButton": "input[value='支払手続き確定'], input[value*='支払'][value*='確定'], input[value='お支払いを確定する']"
   }
 }

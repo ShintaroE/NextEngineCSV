@@ -62,7 +62,7 @@ class ClickPostAutomation {
       // ビルド時: exeと同じフォルダにbrowser-profileを作成
       // ただし、開発時（node.exeの場所）の場合は除外
       const isDevEnvironment = exeDir.toLowerCase().includes('nodejs') ||
-                                exeDir.toLowerCase().includes('node');
+        exeDir.toLowerCase().includes('node');
       if (!isDevEnvironment) {
         return portablePath;
       }
@@ -340,7 +340,9 @@ class ClickPostAutomation {
     this.sendProgress(currentIndex - 1, total, `${currentIndex}件目: 支払いを確定しています...`, 'info');
 
     try {
-      //await this.clickMulti(this.selectors.paymentList.paymentConfirmButton);
+      // ボタンが見つかるまで待機（最大30秒）
+      await this.waitForSelectorMulti(this.selectors.paymentList.yahooPaymentConfirmButton, 30000);
+      //await this.clickMulti(this.selectors.paymentList.yahooPaymentConfirmButton);
       await this.page.waitForLoadState('networkidle');
     } catch (error) {
       throw new Error(`決済確定エラー: ${error.message}`);
@@ -425,6 +427,32 @@ class ClickPostAutomation {
     }
 
     throw new Error(`クリック可能な要素が見つかりません: ${selectorString}`);
+  }
+
+  /**
+   * 複数セレクターのいずれかが見つかるまで待機（カンマ区切りのセレクター対応）
+   */
+  async waitForSelectorMulti(selectorString, timeout = 30000) {
+    const selectors = selectorString.split(',').map(s => s.trim());
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < timeout) {
+      for (const selector of selectors) {
+        try {
+          const element = await this.page.$(selector);
+          if (element) {
+            return true;
+          }
+        } catch (error) {
+          // 次のセレクターを試す
+          continue;
+        }
+      }
+      // 100ms待機して再試行
+      await this.page.waitForTimeout(100);
+    }
+
+    throw new Error(`要素が見つかりません（タイムアウト）: ${selectorString}`);
   }
 
   /**
