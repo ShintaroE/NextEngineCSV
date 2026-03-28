@@ -336,13 +336,19 @@ class ClickPostAutomation {
     await this.clickMulti(this.selectors.paymentList.yahooWalletButton);
     await this.page.waitForLoadState('networkidle');
 
-    // 決済確認ページで「支払手続き確定」をクリック
+    // 決済確認ページで規約同意と「次へ」をクリック
     this.sendProgress(currentIndex - 1, total, `${currentIndex}件目: 支払いを確定しています...`, 'info');
 
     try {
-      // ボタンが見つかるまで待機（最大30秒）
-      await this.waitForSelectorMulti(this.selectors.paymentList.yahooPaymentConfirmButton, 30000);
-      //await this.clickMulti(this.selectors.paymentList.yahooPaymentConfirmButton);
+      // 「次へ」ボタンが見つかるまで待機（最大30秒）
+      await this.waitForSelectorMulti(this.selectors.paymentList.nextButton, 30000);
+
+      // 「上記規約情報に合意する」チェックボックスをクリック
+      await this.clickMulti(this.selectors.paymentList.consentCheckbox);
+      await this.page.waitForTimeout(300);
+
+      // 「次へ」ボタンをクリック
+      await this.clickMulti(this.selectors.paymentList.nextButton);
       await this.page.waitForLoadState('networkidle');
     } catch (error) {
       throw new Error(`決済確定エラー: ${error.message}`);

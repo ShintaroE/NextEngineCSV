@@ -62,6 +62,8 @@
     "dataRows": "tbody tr, .data-row",
     "yahooWalletButton": "input.ywallet_button, input[name^='wallet_button']",
     "paymentConfirmButton": "button[type='submit'], input[type='submit'], #payment_complete, .btn-confirm",
-    "yahooPaymentConfirmButton": "input[value='支払手続き確定'], input[value*='支払'][value*='確定'], input[value='お支払いを確定する']"
+    "yahooPaymentConfirmButton": "input[value='支払手続き確定'], input[value*='支払'][value*='確定'], input[value='お支払いを確定する']",
+    "consentCheckbox": "input#consent-matters-agree",
+    "nextButton": "button.btn-primary.rounded-pill, button.btn-primary.btn-block"
   }
 }
