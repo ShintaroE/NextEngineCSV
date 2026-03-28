@@ -350,6 +350,13 @@ class ClickPostAutomation {
       // 「次へ」ボタンをクリック
       await this.clickMulti(this.selectors.paymentList.nextButton);
       await this.page.waitForLoadState('networkidle');
+
+      // 「支払手続き確定」ボタンが見つかるまで待機
+      await this.waitForSelectorMulti(this.selectors.paymentList.finalConfirmButton, 30000);
+
+      // 「支払手続き確定」ボタンをクリック
+      await this.clickMulti(this.selectors.paymentList.finalConfirmButton);
+      await this.page.waitForLoadState('networkidle');
     } catch (error) {
       throw new Error(`決済確定エラー: ${error.message}`);
     }
