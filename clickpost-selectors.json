@@ -65,6 +65,7 @@
     "yahooPaymentConfirmButton": "input[value='支払手続き確定'], input[value*='支払'][value*='確定'], input[value='お支払いを確定する']",
     "consentCheckbox": "input#consent-matters-agree",
     "nextButton": "button.btn-primary.rounded-pill, button.btn-primary.btn-block",
-    "finalConfirmButton": "input.ui-button[value='支払手続き確定'], input[value='支払手続き確定']"
+    "finalConfirmButton": "input.ui-button[value='支払手続き確定'], input[value='支払手続き確定']",
+    "cvvInput": "input#cvv, input[name='cvv'], input.form-control[name*='cvv']"
   }
 }

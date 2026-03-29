@@ -40,6 +40,23 @@ class ClickPostAutomation {
       console.error(errorMessage);
       throw new Error('clickpost-selectors.json が見つかりません。このファイルは必須です。');
     }
+
+    // クリックポスト設定を読み込む（オプション）
+    this.config = this.loadClickPostConfig();
+  }
+
+  /**
+   * クリックポスト設定を読み込む
+   */
+  loadClickPostConfig() {
+    const configPath = path.join(__dirname, 'data', 'clickpost-config.json');
+    try {
+      const configJson = fs.readFileSync(configPath, 'utf-8');
+      return JSON.parse(configJson);
+    } catch (error) {
+      // 設定ファイルがない場合はデフォルト値を返す
+      return { cvv: '' };
+    }
   }
 
   /**
@@ -342,6 +359,12 @@ class ClickPostAutomation {
     try {
       // 「次へ」ボタンが見つかるまで待機（最大30秒）
       await this.waitForSelectorMulti(this.selectors.paymentList.nextButton, 30000);
+
+      // セキュリティコード（CVV）を入力
+      if (this.config.cvv) {
+        await this.fillInputMulti(this.selectors.paymentList.cvvInput, this.config.cvv);
+        await this.page.waitForTimeout(200);
+      }
 
       // 「上記規約情報に合意する」チェックボックスをクリック
       await this.clickMulti(this.selectors.paymentList.consentCheckbox);
