@@ -16,29 +16,14 @@ class ClickPostAutomation {
     this.tempFilePath = null;
 
     // セレクター設定を読み込む（必須）
-    const selectorsPath = path.join(__dirname, 'clickpost-selectors.json');
+    const selectorsPath = ClickPostAutomation.getSelectorsPath();
 
     try {
       const selectorsJson = fs.readFileSync(selectorsPath, 'utf-8');
       this.selectors = JSON.parse(selectorsJson);
     } catch (error) {
-      const errorMessage = `
-========================================
-❌ エラー: clickpost-selectors.json が見つかりません
-========================================
-
-このファイルはクリックポスト自動化に必須です。
-
-対処方法:
-1. プロジェクトルートに clickpost-selectors.json があることを確認
-2. ファイルが削除されている場合は、CLICKPOST_SETUP.md を参照して再作成
-
-ファイルパス: ${selectorsPath}
-========================================
-      `.trim();
-
-      console.error(errorMessage);
-      throw new Error('clickpost-selectors.json が見つかりません。このファイルは必須です。');
+      console.error(`clickpost-selectors.json が見つかりません: ${selectorsPath}`);
+      throw new Error(`clickpost-selectors.json が見つかりません: ${selectorsPath}`);
     }
 
     // クリックポスト設定を読み込む（オプション）
@@ -68,26 +53,18 @@ class ClickPostAutomation {
 
   /**
    * ブラウザプロファイルのパスを取得
-   * ポータブルビルド対応（main.jsのgetDataPath()と同様のロジック）
+   * ポータブルビルド対応（main.jsのgetDataDir()と同様のロジック）
    */
   getBrowserProfilePath() {
-    // 1. exe同じフォルダ（ビルド時）
-    const exeDir = path.dirname(process.execPath);
-    const portablePath = path.join(exeDir, 'browser-profile');
-    // node_modulesを含まない場合はビルド環境と判断
-    if (!exeDir.includes('node_modules')) {
-      // ビルド時: exeと同じフォルダにbrowser-profileを作成
-      // ただし、開発時（node.exeの場所）の場合は除外
-      const isDevEnvironment = exeDir.toLowerCase().includes('nodejs') ||
-        exeDir.toLowerCase().includes('node');
-      if (!isDevEnvironment) {
-        return portablePath;
+    const { app } = require('electron');
+    if (app.isPackaged) {
+      const portableDir = process.env.PORTABLE_EXECUTABLE_DIR;
+      if (portableDir) {
+        return path.join(portableDir, 'browser-profile');
       }
+      return path.join(app.getPath('userData'), 'browser-profile');
     }
-
-    // 2. プロジェクトルート（開発時）
-    const devPath = path.join(__dirname, 'browser-profile');
-    return devPath;
+    return path.join(__dirname, 'browser-profile');
   }
 
   /**
@@ -534,6 +511,22 @@ class ClickPostAutomation {
       this.page = null;
     }
   }
+  /**
+   * clickpost-selectors.json のパスを取得
+   * ポータブルビルド時はexeと同じフォルダ、開発時はプロジェクトルート
+   */
+  static getSelectorsPath() {
+    const { app } = require('electron');
+    if (app.isPackaged) {
+      const portableDir = process.env.PORTABLE_EXECUTABLE_DIR;
+      if (portableDir) {
+        return path.join(portableDir, 'clickpost-selectors.json');
+      }
+      return path.join(app.getPath('userData'), 'clickpost-selectors.json');
+    }
+    return path.join(__dirname, 'clickpost-selectors.json');
+  }
+
 }
 
 module.exports = ClickPostAutomation;
