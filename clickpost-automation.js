@@ -345,9 +345,9 @@ class ClickPostAutomation {
       // 「次へ」ボタンが見つかるまで待機（最大30秒）
       await this.waitForSelectorMulti(this.selectors.paymentList.nextButton, 30000);
 
-      // カード下4桁を入力
-      if (this.config.cardLast4 && this.selectors.paymentList.cardLast4Input) {
-        await this.fillInputMulti(this.selectors.paymentList.cardLast4Input, this.config.cardLast4);
+      // カード下4桁でラジオボタンを選択
+      if (this.config.cardLast4) {
+        await this.selectCardByLast4(this.config.cardLast4);
         await this.page.waitForTimeout(200);
       }
 
@@ -432,6 +432,45 @@ class ClickPostAutomation {
 
     console.warn(`入力フィールドが見つかりません: ${selectorString}`);
     return false;
+  }
+
+  /**
+   * カード下4桁でラジオボタンを選択
+   * @param {string} last4 - カードの下4桁
+   */
+  async selectCardByLast4(last4) {
+    try {
+      // カードラベルを取得
+      const labelSelector = this.selectors.paymentList.cardLabels;
+      const labels = await this.page.$$(labelSelector);
+
+      for (const label of labels) {
+        const text = await label.textContent();
+        // ラベルテキストに下4桁が含まれているか確認
+        if (text && text.includes(last4)) {
+          // ラベルの for 属性から対応するラジオボタンのIDを取得
+          const forAttr = await label.getAttribute('for');
+          if (forAttr) {
+            const radioButton = await this.page.$(`#${forAttr}`);
+            if (radioButton) {
+              await radioButton.click();
+              console.log(`カード選択: ${text.trim()}`);
+              return true;
+            }
+          }
+          // for属性がない場合はラベル自体をクリック
+          await label.click();
+          console.log(`カード選択: ${text.trim()}`);
+          return true;
+        }
+      }
+
+      console.warn(`下4桁 ${last4} のカードが見つかりません`);
+      return false;
+    } catch (error) {
+      console.warn(`カード選択エラー: ${error.message}`);
+      return false;
+    }
   }
 
   /**

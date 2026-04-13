@@ -67,6 +67,7 @@
     "nextButton": "button.btn-primary.rounded-pill, button.btn-primary.btn-block",
     "finalConfirmButton": "input.ui-button[value='支払手続き確定'], input[value='支払手続き確定']",
     "cvvInput": "input#cvv, input[name='cvv'], input.form-control[name*='cvv']",
-    "cardLast4Input": "input[name='card_last4'], input[id*='last4'], input[name*='last4']"
+    "cardRadioButtons": "input.form-check-input[type='radio'][id^='wallet-credit-card']",
+    "cardLabels": "label.form-check-label[for^='wallet-credit-card']"
   }
 }
