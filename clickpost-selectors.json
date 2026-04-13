@@ -43,8 +43,13 @@
   },
 
   "errors": {
-    "errorMessage": ".error-message, .alert-danger, [class*='error'], .alert-error",
-    "validationError": ".field_with_errors, .has-error, [class*='invalid']"
+    "errorMessage": ".error-message, .alert-danger, .alert-error, .validation-error",
+    "validationError": ".field_with_errors, .has-error"
+  },
+
+  "success": {
+    "mypageUrlPattern": "/mypage",
+    "completedIndicator": ".alert-success, .success-message"
   },
 
   "bulkUpload": {

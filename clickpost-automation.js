@@ -335,6 +335,7 @@ class ClickPostAutomation {
     this.sendProgress(currentIndex - 1, total, `${currentIndex}件目: Yahoo!ウォレット決済ボタンを探しています...`, 'info');
 
     // 「お支払い手続きへ」ボタンをクリック（Yahoo!ウォレット）
+    await this.waitForSelectorMulti(this.selectors.paymentList.yahooWalletButton, 30000);
     await this.clickMulti(this.selectors.paymentList.yahooWalletButton);
     await this.page.waitForLoadState('networkidle');
 
@@ -384,7 +385,14 @@ class ClickPostAutomation {
       throw new Error(`決済確定エラー: ${error.message}`);
     }
 
-    // エラーチェック
+    // 成功判定を先に行う（マイページへのリダイレクト等）
+    const isSuccess = await this.isPaymentSuccessful();
+    if (isSuccess) {
+      console.log('[Payment] Payment completed successfully');
+      return; // 成功の場合はエラーチェックをスキップ
+    }
+
+    // エラーチェック（成功でない場合のみ）
     const hasError = await this.checkForErrors();
     if (hasError) {
       const errorText = await this.getErrorText();
@@ -583,12 +591,59 @@ class ClickPostAutomation {
   }
 
   /**
-   * エラーチェック
+   * 決済が成功したか判定
+   * @returns {boolean} 成功ならtrue
+   */
+  async isPaymentSuccessful() {
+    try {
+      // 1. URLチェック（マイページにリダイレクトされたか）
+      const currentUrl = this.page.url();
+      const mypagePattern = this.selectors.success?.mypageUrlPattern || '/mypage';
+      if (currentUrl.includes(mypagePattern)) {
+        console.log(`[Payment] Success: Redirected to mypage (${currentUrl})`);
+        return true;
+      }
+
+      // 2. 成功インジケータ要素チェック
+      const successSelector = this.selectors.success?.completedIndicator;
+      if (successSelector) {
+        const successElement = await this.page.$(successSelector);
+        if (successElement) {
+          const isVisible = await successElement.isVisible();
+          if (isVisible) {
+            console.log('[Payment] Success: Found success indicator');
+            return true;
+          }
+        }
+      }
+
+      return false;
+    } catch (error) {
+      console.warn(`[Payment] Success check error: ${error.message}`);
+      return false;
+    }
+  }
+
+  /**
+   * エラーチェック（表示されているエラー要素のみ検出）
    */
   async checkForErrors() {
     try {
-      const errorElement = await this.page.$(this.selectors.errors.errorMessage);
-      return errorElement !== null;
+      const errorSelector = this.selectors.errors.errorMessage;
+      const selectors = errorSelector.split(',').map(s => s.trim());
+
+      for (const selector of selectors) {
+        const errorElement = await this.page.$(selector);
+        if (errorElement) {
+          // 要素が表示されているかも確認
+          const isVisible = await errorElement.isVisible();
+          if (isVisible) {
+            console.log(`[Error] Visible error found: ${selector}`);
+            return true;
+          }
+        }
+      }
+      return false;
     } catch (error) {
       return false;
     }
@@ -599,10 +654,18 @@ class ClickPostAutomation {
    */
   async getErrorText() {
     try {
-      const errorElement = await this.page.$(this.selectors.errors.errorMessage);
-      if (errorElement) {
-        const text = await errorElement.textContent();
-        return text ? text.trim() : 'エラーが発生しました';
+      const errorSelector = this.selectors.errors.errorMessage;
+      const selectors = errorSelector.split(',').map(s => s.trim());
+
+      for (const selector of selectors) {
+        const errorElement = await this.page.$(selector);
+        if (errorElement) {
+          const isVisible = await errorElement.isVisible();
+          if (isVisible) {
+            const text = await errorElement.textContent();
+            return text ? text.trim() : 'エラーが発生しました';
+          }
+        }
       }
       return 'エラーが発生しました';
     } catch (error) {
