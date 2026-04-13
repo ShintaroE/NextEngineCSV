@@ -198,8 +198,8 @@ class ClickPostAutomation {
           // エラーが発生しても次の行に進む
         }
 
-        // レート制限（1秒待機）
-        await this.page.waitForTimeout(1000);
+        // ネットワークが安定するまで待機
+        await this.page.waitForLoadState('networkidle');
       }
 
       this.sendProgress(total, total, 'すべての処理が完了しました！', 'success');
@@ -347,19 +347,23 @@ class ClickPostAutomation {
 
       // カード下4桁でラジオボタンを選択
       if (this.config.cardLast4) {
-        await this.selectCardByLast4(this.config.cardLast4);
+        console.log(`[Card] Config value: ${this.config.cardLast4}`);
+        const cardResult = await this.selectCardByLast4(this.config.cardLast4);
+        console.log(`[Card] Result: ${cardResult ? 'SUCCESS' : 'FAILED'}`);
         // カード選択後、CVVフィールドが有効になるまで待機
         await this.page.waitForTimeout(500);
+      } else {
+        console.log('[Card] No config value set');
       }
 
       // セキュリティコード（CVV）を入力
       if (this.config.cvv) {
-        console.log(`CVV設定値: ${this.config.cvv}`);
+        console.log(`[CVV] Config value: ${this.config.cvv}`);
         const cvvResult = await this.fillCvvInput(this.config.cvv);
-        console.log(`CVV入力結果: ${cvvResult ? '成功' : '失敗'}`);
+        console.log(`[CVV] Result: ${cvvResult ? 'SUCCESS' : 'FAILED'}`);
         await this.page.waitForTimeout(300);
       } else {
-        console.log('CVV設定がありません');
+        console.log('[CVV] No config value set');
       }
 
       // 「上記規約情報に合意する」チェックボックスをクリック
@@ -447,19 +451,19 @@ class ClickPostAutomation {
     const cvvSelector = this.selectors.paymentList.cvvInput;
     const selectors = cvvSelector.split(',').map(s => s.trim());
 
-    console.log(`CVV入力開始: セレクター = ${cvvSelector}`);
+    console.log(`[CVV] Start input: selector = ${cvvSelector}`);
 
     for (const selector of selectors) {
       try {
-        console.log(`CVV: セレクター試行 = ${selector}`);
+        console.log(`[CVV] Trying selector: ${selector}`);
         const element = await this.page.$(selector);
 
         if (element) {
-          console.log(`CVV: 要素発見`);
+          console.log(`[CVV] Element found`);
 
           // 要素が表示・有効になるまで待機
           await this.page.waitForSelector(selector, { state: 'visible', timeout: 5000 });
-          console.log(`CVV: 要素が表示されました`);
+          console.log(`[CVV] Element is visible`);
 
           // フォーカスを当てる
           await element.focus();
@@ -472,19 +476,19 @@ class ClickPostAutomation {
 
           // キーボードで直接入力
           await this.page.keyboard.type(cvv, { delay: 50 });
-          console.log(`CVV: 入力完了`);
+          console.log(`[CVV] Input complete`);
 
           return true;
         } else {
-          console.log(`CVV: セレクター ${selector} で要素が見つかりません`);
+          console.log(`[CVV] Element not found with: ${selector}`);
         }
       } catch (error) {
-        console.error(`CVV: エラー (${selector}): ${error.message}`);
+        console.error(`[CVV] Error (${selector}): ${error.message}`);
         continue;
       }
     }
 
-    console.warn(`セキュリティコード入力フィールドが見つかりません: ${cvvSelector}`);
+    console.warn(`[CVV] Input field not found: ${cvvSelector}`);
     return false;
   }
 
@@ -497,9 +501,12 @@ class ClickPostAutomation {
       // カードラベルを取得
       const labelSelector = this.selectors.paymentList.cardLabels;
       const labels = await this.page.$$(labelSelector);
+      console.log(`[Card] Searching for card ending in: ${last4}`);
+      console.log(`[Card] Found ${labels.length} card label(s)`);
 
       for (const label of labels) {
         const text = await label.textContent();
+        console.log(`[Card] Checking label: ${text ? text.trim() : '(empty)'}`);
         // ラベルテキストに下4桁が含まれているか確認
         if (text && text.includes(last4)) {
           // ラベルの for 属性から対応するラジオボタンのIDを取得
@@ -508,21 +515,21 @@ class ClickPostAutomation {
             const radioButton = await this.page.$(`#${forAttr}`);
             if (radioButton) {
               await radioButton.click();
-              console.log(`カード選択: ${text.trim()}`);
+              console.log(`[Card] Selected: ${text.trim()}`);
               return true;
             }
           }
           // for属性がない場合はラベル自体をクリック
           await label.click();
-          console.log(`カード選択: ${text.trim()}`);
+          console.log(`[Card] Selected (via label click): ${text.trim()}`);
           return true;
         }
       }
 
-      console.warn(`下4桁 ${last4} のカードが見つかりません`);
+      console.warn(`[Card] Card with last4=${last4} not found`);
       return false;
     } catch (error) {
-      console.warn(`カード選択エラー: ${error.message}`);
+      console.warn(`[Card] Selection error: ${error.message}`);
       return false;
     }
   }

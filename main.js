@@ -4,6 +4,16 @@ const fs = require('fs');
 const iconv = require('iconv-lite');
 const nextengineApi = require('./nextengine-api');
 
+// Windows コンソールのUTF-8対応
+if (process.platform === 'win32') {
+  const { execSync } = require('child_process');
+  try {
+    execSync('chcp 65001', { stdio: 'ignore' });
+  } catch (e) {
+    // ignore
+  }
+}
+
 // データフォルダのパスを取得
 function getDataDir() {
   if (app.isPackaged) {
