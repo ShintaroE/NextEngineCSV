@@ -387,7 +387,10 @@
 
     <!-- クリックポスト自動決済画面 -->
     <div id="clickpost" class="tab-panel">
-      <h2>クリックポスト自動決済</h2>
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 20px;">
+        <h2 style="margin: 0; color: #2c3e50;">クリックポスト自動決済</h2>
+        <button id="btn-clickpost-card-settings" class="btn btn-secondary">カード設定</button>
+      </div>
 
       <!-- ステップ1: CSV読み込み -->
       <section style="margin-bottom: 32px;">
@@ -530,6 +533,30 @@
           <button id="btn-save-auth" class="btn btn-secondary">設定を保存</button>
           <span id="auth-status" style="font-size: 14px; color: #666;">認証状態: 未設定</span>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- カード設定モーダル -->
+  <div id="card-settings-modal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>カード設定</h3>
+        <button class="modal-close" id="card-settings-modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="card-last4">クレジットカード下4桁</label>
+          <input type="password" id="card-last4" placeholder="例: 1234" maxlength="4" inputmode="numeric">
+        </div>
+        <div class="form-group">
+          <label for="card-cvv">セキュリティコード（CVV）</label>
+          <input type="password" id="card-cvv" placeholder="例: 123" maxlength="4" inputmode="numeric">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="card-settings-cancel">キャンセル</button>
+        <button class="btn btn-primary" id="card-settings-save">保存</button>
       </div>
     </div>
   </div>

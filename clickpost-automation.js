@@ -34,13 +34,21 @@ class ClickPostAutomation {
    * クリックポスト設定を読み込む
    */
   loadClickPostConfig() {
-    const configPath = path.join(__dirname, 'data', 'clickpost-config.json');
+    const { app } = require('electron');
+    let configPath;
+    if (app.isPackaged) {
+      const portableDir = process.env.PORTABLE_EXECUTABLE_DIR;
+      configPath = portableDir
+        ? path.join(portableDir, 'data', 'clickpost-config.json')
+        : path.join(app.getPath('userData'), 'data', 'clickpost-config.json');
+    } else {
+      configPath = path.join(__dirname, 'data', 'clickpost-config.json');
+    }
     try {
       const configJson = fs.readFileSync(configPath, 'utf-8');
       return JSON.parse(configJson);
     } catch (error) {
-      // 設定ファイルがない場合はデフォルト値を返す
-      return { cvv: '' };
+      return { cardLast4: '', cvv: '' };
     }
   }
 
@@ -336,6 +344,12 @@ class ClickPostAutomation {
     try {
       // 「次へ」ボタンが見つかるまで待機（最大30秒）
       await this.waitForSelectorMulti(this.selectors.paymentList.nextButton, 30000);
+
+      // カード下4桁を入力
+      if (this.config.cardLast4 && this.selectors.paymentList.cardLast4Input) {
+        await this.fillInputMulti(this.selectors.paymentList.cardLast4Input, this.config.cardLast4);
+        await this.page.waitForTimeout(200);
+      }
 
       // セキュリティコード（CVV）を入力
       if (this.config.cvv) {

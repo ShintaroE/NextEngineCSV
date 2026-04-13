@@ -631,6 +631,8 @@ function initClickPostFeature() {
   const btnLoadCsv = document.getElementById('btn-load-clickpost-csv');
   const btnStartAutomation = document.getElementById('btn-start-automation');
   const btnStopAutomation = document.getElementById('btn-stop-automation');
+  const btnCardSettings = document.getElementById('btn-clickpost-card-settings');
+  const cardModal = document.getElementById('card-settings-modal');
 
   // CSV読み込みボタン
   btnLoadCsv.addEventListener('click', loadClickPostCsv);
@@ -640,6 +642,44 @@ function initClickPostFeature() {
 
   // 停止ボタン
   btnStopAutomation.addEventListener('click', stopAutomation);
+
+  // カード設定ボタン → モーダルを開く
+  btnCardSettings.addEventListener('click', async () => {
+    const config = await window.electronAPI.loadClickPostConfig();
+    document.getElementById('card-last4').value = config.cardLast4 || '';
+    document.getElementById('card-cvv').value = config.cvv || '';
+    cardModal.classList.add('active');
+  });
+
+  // モーダルを閉じる
+  document.getElementById('card-settings-modal-close').addEventListener('click', () => {
+    cardModal.classList.remove('active');
+  });
+  document.getElementById('card-settings-cancel').addEventListener('click', () => {
+    cardModal.classList.remove('active');
+  });
+
+  // 保存ボタン
+  document.getElementById('card-settings-save').addEventListener('click', async () => {
+    const cardLast4 = document.getElementById('card-last4').value.trim();
+    const cvv = document.getElementById('card-cvv').value.trim();
+
+    if (cardLast4 && !/^\d{4}$/.test(cardLast4)) {
+      await window.electronAPI.showAlert('クレジットカード下4桁は数字4桁で入力してください。');
+      return;
+    }
+    if (cvv && !/^\d{3,4}$/.test(cvv)) {
+      await window.electronAPI.showAlert('セキュリティコードは数字3〜4桁で入力してください。');
+      return;
+    }
+
+    const result = await window.electronAPI.saveClickPostConfig({ cardLast4, cvv });
+    if (result.success) {
+      cardModal.classList.remove('active');
+    } else {
+      await window.electronAPI.showAlert(`保存に失敗しました: ${result.error}`);
+    }
+  });
 
   // 進行状況イベントを受信
   window.electronAPI.onClickPostProgress((event, progress) => {

@@ -66,6 +66,7 @@
     "consentCheckbox": "input#consent-matters-agree",
     "nextButton": "button.btn-primary.rounded-pill, button.btn-primary.btn-block",
     "finalConfirmButton": "input.ui-button[value='支払手続き確定'], input[value='支払手続き確定']",
-    "cvvInput": "input#cvv, input[name='cvv'], input.form-control[name*='cvv']"
+    "cvvInput": "input#cvv, input[name='cvv'], input.form-control[name*='cvv']",
+    "cardLast4Input": "input[name='card_last4'], input[id*='last4'], input[name*='last4']"
   }
 }

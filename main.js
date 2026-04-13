@@ -346,6 +346,32 @@ ipcMain.handle('clickpost:startAutomation', async (event, csvData) => {
   }
 });
 
+// IPC ハンドラー: クリックポスト設定を読み込む
+ipcMain.handle('clickpost:loadConfig', () => {
+  const filePath = path.join(ensureDataDir(), 'clickpost-config.json');
+  try {
+    if (fs.existsSync(filePath)) {
+      const data = fs.readFileSync(filePath, 'utf-8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('クリックポスト設定読み込みエラー:', error);
+  }
+  return { cardLast4: '', cvv: '' };
+});
+
+// IPC ハンドラー: クリックポスト設定を保存
+ipcMain.handle('clickpost:saveConfig', (_event, config) => {
+  const filePath = path.join(ensureDataDir(), 'clickpost-config.json');
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(config, null, 2), 'utf-8');
+    return { success: true };
+  } catch (error) {
+    console.error('クリックポスト設定保存エラー:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // IPC ハンドラー: クリックポスト自動決済を停止
 ipcMain.handle('clickpost:stopAutomation', async () => {
   try {
