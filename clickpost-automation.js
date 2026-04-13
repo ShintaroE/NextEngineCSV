@@ -348,13 +348,18 @@ class ClickPostAutomation {
       // カード下4桁でラジオボタンを選択
       if (this.config.cardLast4) {
         await this.selectCardByLast4(this.config.cardLast4);
-        await this.page.waitForTimeout(200);
+        // カード選択後、CVVフィールドが有効になるまで待機
+        await this.page.waitForTimeout(500);
       }
 
       // セキュリティコード（CVV）を入力
       if (this.config.cvv) {
-        await this.fillCvvInput(this.config.cvv);
-        await this.page.waitForTimeout(200);
+        console.log(`CVV設定値: ${this.config.cvv}`);
+        const cvvResult = await this.fillCvvInput(this.config.cvv);
+        console.log(`CVV入力結果: ${cvvResult ? '成功' : '失敗'}`);
+        await this.page.waitForTimeout(300);
+      } else {
+        console.log('CVV設定がありません');
       }
 
       // 「上記規約情報に合意する」チェックボックスをクリック
@@ -442,20 +447,39 @@ class ClickPostAutomation {
     const cvvSelector = this.selectors.paymentList.cvvInput;
     const selectors = cvvSelector.split(',').map(s => s.trim());
 
+    console.log(`CVV入力開始: セレクター = ${cvvSelector}`);
+
     for (const selector of selectors) {
       try {
+        console.log(`CVV: セレクター試行 = ${selector}`);
         const element = await this.page.$(selector);
+
         if (element) {
-          // 要素が表示されるまで待機
-          await element.waitForElementState('visible', { timeout: 5000 });
-          // フィールドをクリアしてから入力
-          await element.click();
-          await element.fill('');
-          await element.pressSequentially(cvv, { delay: 50 });
-          console.log(`セキュリティコード入力完了`);
+          console.log(`CVV: 要素発見`);
+
+          // 要素が表示・有効になるまで待機
+          await this.page.waitForSelector(selector, { state: 'visible', timeout: 5000 });
+          console.log(`CVV: 要素が表示されました`);
+
+          // フォーカスを当てる
+          await element.focus();
+          await this.page.waitForTimeout(100);
+
+          // 既存の値をクリア（Ctrl+A → Delete）
+          await this.page.keyboard.press('Control+A');
+          await this.page.keyboard.press('Delete');
+          await this.page.waitForTimeout(100);
+
+          // キーボードで直接入力
+          await this.page.keyboard.type(cvv, { delay: 50 });
+          console.log(`CVV: 入力完了`);
+
           return true;
+        } else {
+          console.log(`CVV: セレクター ${selector} で要素が見つかりません`);
         }
       } catch (error) {
+        console.error(`CVV: エラー (${selector}): ${error.message}`);
         continue;
       }
     }
