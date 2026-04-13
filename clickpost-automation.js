@@ -353,7 +353,7 @@ class ClickPostAutomation {
 
       // セキュリティコード（CVV）を入力
       if (this.config.cvv) {
-        await this.fillInputMulti(this.selectors.paymentList.cvvInput, this.config.cvv);
+        await this.fillCvvInput(this.config.cvv);
         await this.page.waitForTimeout(200);
       }
 
@@ -431,6 +431,36 @@ class ClickPostAutomation {
     }
 
     console.warn(`入力フィールドが見つかりません: ${selectorString}`);
+    return false;
+  }
+
+  /**
+   * セキュリティコード（CVV）を入力
+   * @param {string} cvv - セキュリティコード
+   */
+  async fillCvvInput(cvv) {
+    const cvvSelector = this.selectors.paymentList.cvvInput;
+    const selectors = cvvSelector.split(',').map(s => s.trim());
+
+    for (const selector of selectors) {
+      try {
+        const element = await this.page.$(selector);
+        if (element) {
+          // 要素が表示されるまで待機
+          await element.waitForElementState('visible', { timeout: 5000 });
+          // フィールドをクリアしてから入力
+          await element.click();
+          await element.fill('');
+          await element.pressSequentially(cvv, { delay: 50 });
+          console.log(`セキュリティコード入力完了`);
+          return true;
+        }
+      } catch (error) {
+        continue;
+      }
+    }
+
+    console.warn(`セキュリティコード入力フィールドが見つかりません: ${cvvSelector}`);
     return false;
   }
 
