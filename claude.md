@@ -246,3 +246,4 @@ if (rows.length <= MAX_ROWS_PER_FILE) {
 - **productName**: `NextEngineCSV`
 - **出力先**: `dist/`
 - **ターゲット**: Windows Portable (x64 + ia32)
+
