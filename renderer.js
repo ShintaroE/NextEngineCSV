@@ -31,6 +31,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ログ機能の初期化
   initLogFeature();
+
+  // 問い合わせ番号機能の初期化
+  initInquiryFeature();
 });
 
 // ========================================
@@ -852,6 +855,14 @@ function addProgressLog(message, status = 'info') {
 
   // 自動スクロール
   progressLog.scrollTop = progressLog.scrollHeight;
+}
+
+// ========================================
+// 問い合わせ番号機能
+// ========================================
+
+function initInquiryFeature() {
+  // TODO: 機能実装時に追加
 }
 
 // ボタンの表示状態を更新

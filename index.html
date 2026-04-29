@@ -335,6 +335,7 @@
   <ul class="tab-nav">
     <li class="active" data-tab="search">検索</li>
     <li data-tab="clickpost">クリックポスト自動決済</li>
+    <li data-tab="inquiry">問い合わせ番号</li>
     <li data-tab="log">ログ出力</li>
     <li data-tab="master">マスタ設定</li>
     <li data-tab="auth">認証</li>
@@ -449,6 +450,82 @@
           </div>
           <div id="progress-log" style="max-height: 200px; overflow-y: auto; font-size: 13px; color: #666;">
             <!-- ログはJSで動的に追加 -->
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- 問い合わせ番号画面 -->
+    <div id="inquiry" class="tab-panel">
+      <h2>問い合わせ番号</h2>
+
+      <!-- セクション1: 問い合わせ番号CSVファイル作成 -->
+      <section style="margin-bottom: 40px;">
+        <h3 style="color: #2c3e50; font-size: 16px; border-left: 4px solid #3498db; padding-left: 10px; margin-bottom: 16px;">
+          問い合わせ番号CSVファイル作成
+        </h3>
+
+        <!-- CSVファイル選択 -->
+        <div style="margin-bottom: 16px;">
+          <button id="btn-load-inquiry-csv" class="btn btn-primary">CSVファイルを開く</button>
+          <span id="inquiry-csv-info" style="margin-left: 12px; color: #666; font-size: 14px;"></span>
+        </div>
+
+        <!-- データプレビューテーブル -->
+        <div id="inquiry-csv-preview" style="display: none;">
+          <div id="inquiry-csv-summary" style="background: #f0f4f8; border: 1px solid #d0d9e3; border-radius: 4px; padding: 10px 14px; margin-bottom: 12px; font-size: 14px; color: #444;"></div>
+          <div style="max-height: 300px; overflow-y: auto; margin-bottom: 16px;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 50px;">No.</th>
+                  <th>伝票番号</th>
+                  <th>お届け先氏名</th>
+                  <th>お届け先郵便番号</th>
+                  <th>問い合わせ番号</th>
+                </tr>
+              </thead>
+              <tbody id="inquiry-csv-body">
+                <!-- データはJSで動的に追加 -->
+              </tbody>
+            </table>
+          </div>
+          <div style="display: flex; justify-content: flex-end;">
+            <button id="btn-export-inquiry-csv" class="btn btn-success btn-large">CSV出力</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- セクション2: 問い合わせ番号連携 -->
+      <section style="border-top: 1px solid #ddd; padding-top: 32px;">
+        <h3 style="color: #2c3e50; font-size: 16px; border-left: 4px solid #27ae60; padding-left: 10px; margin-bottom: 16px;">
+          問い合わせ番号連携
+        </h3>
+
+        <!-- ファイル選択 -->
+        <div style="margin-bottom: 16px;">
+          <button id="btn-load-inquiry-link-csv" class="btn btn-primary">CSVファイルを開く</button>
+          <span id="inquiry-link-csv-info" style="margin-left: 12px; color: #666; font-size: 14px;"></span>
+        </div>
+
+        <!-- 連携実行 -->
+        <div id="inquiry-link-action" style="display: none; margin-bottom: 16px;">
+          <div id="inquiry-link-summary" style="background: #f0f4f8; border: 1px solid #d0d9e3; border-radius: 4px; padding: 10px 14px; margin-bottom: 12px; font-size: 14px; color: #444;"></div>
+          <button id="btn-start-inquiry-link" class="btn btn-success btn-large">連携を開始</button>
+        </div>
+
+        <!-- 進行状況 -->
+        <div id="inquiry-link-progress" style="display: none;">
+          <div style="background: #f8f9fa; border-radius: 4px; padding: 16px;">
+            <div style="background: #e9ecef; border-radius: 8px; height: 24px; overflow: hidden; margin-bottom: 12px;">
+              <div id="inquiry-progress-bar-fill" style="background: linear-gradient(90deg, #27ae60, #2ecc71); height: 100%; width: 0%; transition: width 0.3s;"></div>
+            </div>
+            <div id="inquiry-progress-text" style="font-size: 14px; font-weight: 600; color: #2c3e50; margin-bottom: 8px;">
+              0 / 0 件処理完了
+            </div>
+            <div id="inquiry-progress-log" style="max-height: 200px; overflow-y: auto; font-size: 13px; color: #666;">
+              <!-- ログはJSで動的に追加 -->
+            </div>
           </div>
         </div>
       </section>
