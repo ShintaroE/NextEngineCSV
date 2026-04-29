@@ -31,7 +31,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   stopClickPostAutomation: () => ipcRenderer.invoke('clickpost:stopAutomation'),
   onClickPostProgress: (callback) => ipcRenderer.on('clickpost:progress', callback),
   loadClickPostConfig: () => ipcRenderer.invoke('clickpost:loadConfig'),
-  saveClickPostConfig: (config) => ipcRenderer.invoke('clickpost:saveConfig', config)
+  saveClickPostConfig: (config) => ipcRenderer.invoke('clickpost:saveConfig', config),
+  // 問い合わせ番号API
+  startInquiryCsvCreation: (page) => ipcRenderer.invoke('inquiry:startCsvCreation', page)
 });
 
 // Node.jsとElectronのバージョン情報を公開

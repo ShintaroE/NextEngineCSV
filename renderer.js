@@ -862,7 +862,17 @@ function addProgressLog(message, status = 'info') {
 // ========================================
 
 function initInquiryFeature() {
-  // TODO: 機能実装時に追加
+  document.getElementById('btn-create-inquiry-csv').addEventListener('click', async () => {
+    const pageInput = document.getElementById('inquiry-page');
+    const page = parseInt(pageInput.value, 10);
+
+    if (!page || page < 1) {
+      await window.electronAPI.showAlert('問い合わせ番号抽出行数を1以上の数値で入力してください');
+      return;
+    }
+
+    await window.electronAPI.startInquiryCsvCreation(page);
+  });
 }
 
 // ボタンの表示状態を更新

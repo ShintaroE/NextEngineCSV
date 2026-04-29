@@ -495,6 +495,27 @@ ipcMain.handle('csv:saveMultiple', async (event, csvContents) => {
   }
 });
 
+// ========================================
+// 問い合わせ番号関連 IPC ハンドラー
+// ========================================
+
+let inquiryAutomation = null;
+
+// IPC ハンドラー: 問い合わせ番号CSVファイル作成（ブラウザ起動）
+ipcMain.handle('inquiry:startCsvCreation', async (event, page) => {
+  try {
+    if (!inquiryAutomation) {
+      const InquiryAutomation = require('./inquiry-automation');
+      inquiryAutomation = new InquiryAutomation();
+    }
+    await inquiryAutomation.start(page);
+    return { success: true };
+  } catch (error) {
+    console.error('問い合わせ番号CSV作成エラー:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // 全ウィンドウが閉じられたらアプリを終了（macOS以外）
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
