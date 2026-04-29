@@ -7,16 +7,27 @@ class InquiryAutomation {
     this.browser = null;
     this.page = null;
     this.progressCallback = null;
-  }
 
-  onProgress(callback) {
-    this.progressCallback = callback;
-  }
-
-  sendProgress(current, total, message, status = 'info') {
-    if (this.progressCallback) {
-      this.progressCallback({ current, total, message, status });
+    const selectorsPath = InquiryAutomation.getSelectorsPath();
+    try {
+      const selectorsJson = fs.readFileSync(selectorsPath, 'utf-8');
+      this.selectors = JSON.parse(selectorsJson);
+    } catch (error) {
+      console.error(`inquiry-selectors.json が見つかりません: ${selectorsPath}`);
+      throw new Error(`inquiry-selectors.json が見つかりません: ${selectorsPath}`);
     }
+  }
+
+  static getSelectorsPath() {
+    const { app } = require('electron');
+    if (app.isPackaged) {
+      const portableDir = process.env.PORTABLE_EXECUTABLE_DIR;
+      if (portableDir) {
+        return path.join(portableDir, 'inquiry-selectors.json');
+      }
+      return path.join(app.getPath('userData'), 'inquiry-selectors.json');
+    }
+    return path.join(__dirname, 'inquiry-selectors.json');
   }
 
   getBrowserProfilePath() {
@@ -29,6 +40,16 @@ class InquiryAutomation {
       return path.join(app.getPath('userData'), 'browser-profile');
     }
     return path.join(__dirname, 'browser-profile');
+  }
+
+  onProgress(callback) {
+    this.progressCallback = callback;
+  }
+
+  sendProgress(current, total, message, status = 'info') {
+    if (this.progressCallback) {
+      this.progressCallback({ current, total, message, status });
+    }
   }
 
   async start(rowCount) {
@@ -75,18 +96,18 @@ class InquiryAutomation {
       this.page = this.browser.pages()[0] || await this.browser.newPage();
 
       this.sendProgress(0, rowCount, 'クリックポストにアクセスしています...', 'info');
-      await this.page.goto('https://clickpost.jp/mypage/index?page=1');
+      await this.page.goto(`${this.selectors.urls.mypage}?page=1`);
       await this.page.waitForLoadState('networkidle');
 
       // ログイン未済の場合は手動ログイン待機
-      if (!this.page.url().includes('/mypage/')) {
+      if (!this.page.url().includes(this.selectors.navigation.mypageUrlPattern)) {
         this.sendProgress(0, rowCount, 'ログインしてください（手動）', 'info');
         try {
-          await this.page.waitForURL('**/mypage/**', { timeout: 300000 });
+          await this.page.waitForURL(this.selectors.navigation.mypageUrlGlob, { timeout: 300000 });
         } catch {
           throw new Error('ログインタイムアウト。5分以内にログインしてください。');
         }
-        await this.page.goto('https://clickpost.jp/mypage/index?page=1');
+        await this.page.goto(`${this.selectors.urls.mypage}?page=1`);
         await this.page.waitForLoadState('networkidle');
       }
 
@@ -94,19 +115,19 @@ class InquiryAutomation {
 
       for (let p = 1; p <= totalPages; p++) {
         if (p > 1) {
-          await this.page.goto(`https://clickpost.jp/mypage/index?page=${p}`);
+          await this.page.goto(`${this.selectors.urls.mypage}?page=${p}`);
           await this.page.waitForLoadState('networkidle');
         }
 
         this.sendProgress(results.length, rowCount, `${p} / ${totalPages} ページを処理中...`, 'info');
 
-        const rows = await this.page.$$('tbody[data-mypage-target="tbody"] tr');
+        const rows = await this.page.$$(this.selectors.mypage.tableRows);
 
         for (const row of rows) {
           if (results.length >= rowCount) break;
 
-          const inquiryNumberEl = await row.$('td.col_package_number');
-          const nameEl = await row.$('td.col_receiver');
+          const inquiryNumberEl = await row.$(this.selectors.mypage.inquiryNumber);
+          const nameEl = await row.$(this.selectors.mypage.recipientName);
           if (!inquiryNumberEl || !nameEl) continue;
 
           const inquiryNumber = (await inquiryNumberEl.textContent() || '').trim();

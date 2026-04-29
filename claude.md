@@ -57,7 +57,9 @@ npm run build
 | [renderer.js](renderer.js) | UIロジック。タブ管理、フォーム処理、CSV出力ロジック、イベントハンドリング |
 | [nextengine-api.js](nextengine-api.js) | ネクストエンジンAPI通信。認証、トークン管理、ログ機構 |
 | [clickpost-automation.js](clickpost-automation.js) | Playwright自動化。クリックポスト決済の自動実行 |
-| [clickpost-selectors.json](clickpost-selectors.json) | クリックポストセレクター設定（カスタマイズ可能） |
+| [clickpost-selectors.json](clickpost-selectors.json) | クリックポスト自動決済セレクター設定（カスタマイズ可能） |
+| [inquiry-selectors.json](inquiry-selectors.json) | 問い合わせ番号抽出セレクター設定（カスタマイズ可能） |
+| [inquiry-automation.js](inquiry-automation.js) | Playwright自動化。マイページから問い合わせ番号を抽出しCSV出力 |
 | [index.html](index.html) | UIレイアウト。5タブ構成（検索、クリックポスト、ログ、マスタ、認証） |
 
 ### IPC通信インターフェース

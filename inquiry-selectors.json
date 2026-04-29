@@ -1,0 +1,20 @@
+{
+  "description": "クリックポストマイページ（問い合わせ番号抽出）のセレクター設定ファイル",
+  "lastUpdated": "2026-04-29",
+  "note": "実際のサイト構造に合わせて調整してください。開発者ツール(F12)でセレクターを確認できます。",
+
+  "urls": {
+    "mypage": "https://clickpost.jp/mypage/index"
+  },
+
+  "navigation": {
+    "mypageUrlPattern": "/mypage/",
+    "mypageUrlGlob": "**/mypage/**"
+  },
+
+  "mypage": {
+    "tableRows": "tbody[data-mypage-target=\"tbody\"] tr",
+    "inquiryNumber": "td.col_package_number",
+    "recipientName": "td.col_receiver"
+  }
+}
