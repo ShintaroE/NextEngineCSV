@@ -500,16 +500,52 @@ ipcMain.handle('csv:saveMultiple', async (event, csvContents) => {
 // ========================================
 
 let inquiryAutomation = null;
+let mainWindowForInquiryProgress = null;
 
-// IPC ハンドラー: 問い合わせ番号CSVファイル作成（ブラウザ起動）
-ipcMain.handle('inquiry:startCsvCreation', async (event, page) => {
+// IPC ハンドラー: 問い合わせ番号CSVファイル作成（スクレイピング→CSV保存）
+ipcMain.handle('inquiry:startCsvCreation', async (event, rowCount) => {
   try {
+    mainWindowForInquiryProgress = BrowserWindow.fromWebContents(event.sender);
+
     if (!inquiryAutomation) {
       const InquiryAutomation = require('./inquiry-automation');
       inquiryAutomation = new InquiryAutomation();
     }
-    await inquiryAutomation.start(page);
-    return { success: true };
+
+    inquiryAutomation.onProgress((progress) => {
+      if (mainWindowForInquiryProgress && !mainWindowForInquiryProgress.isDestroyed()) {
+        mainWindowForInquiryProgress.webContents.send('inquiry:progress', progress);
+      }
+    });
+
+    const data = await inquiryAutomation.start(rowCount);
+
+    if (data.length === 0) {
+      return { success: false, error: '抽出できるデータがありませんでした' };
+    }
+
+    // CSVを生成
+    const header = 'お届け先氏名,お問い合わせ番号';
+    const rows = data.map(({ name, inquiryNumber }) =>
+      `"${name.replace(/"/g, '""')}","${inquiryNumber.replace(/"/g, '""')}"`
+    );
+    const csvContent = [header, ...rows].join('\r\n');
+
+    // 保存ダイアログ
+    const result = await dialog.showSaveDialog({
+      title: '問い合わせ番号CSVを保存',
+      defaultPath: 'inquiry.csv',
+      filters: [{ name: 'CSVファイル', extensions: ['csv'] }]
+    });
+
+    if (result.canceled || !result.filePath) {
+      return { success: false, canceled: true };
+    }
+
+    const sjisBuffer = iconv.encode(csvContent, 'Shift_JIS');
+    fs.writeFileSync(result.filePath, sjisBuffer);
+
+    return { success: true, count: data.length };
   } catch (error) {
     console.error('問い合わせ番号CSV作成エラー:', error);
     return { success: false, error: error.message };

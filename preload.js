@@ -33,7 +33,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadClickPostConfig: () => ipcRenderer.invoke('clickpost:loadConfig'),
   saveClickPostConfig: (config) => ipcRenderer.invoke('clickpost:saveConfig', config),
   // 問い合わせ番号API
-  startInquiryCsvCreation: (page) => ipcRenderer.invoke('inquiry:startCsvCreation', page)
+  startInquiryCsvCreation: (rowCount) => ipcRenderer.invoke('inquiry:startCsvCreation', rowCount),
+  onInquiryProgress: (callback) => ipcRenderer.on('inquiry:progress', callback)
 });
 
 // Node.jsとElectronのバージョン情報を公開

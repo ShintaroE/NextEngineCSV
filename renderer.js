@@ -863,16 +863,58 @@ function addProgressLog(message, status = 'info') {
 
 function initInquiryFeature() {
   document.getElementById('btn-create-inquiry-csv').addEventListener('click', async () => {
-    const pageInput = document.getElementById('inquiry-page');
-    const page = parseInt(pageInput.value, 10);
+    const rowCount = parseInt(document.getElementById('inquiry-page').value, 10);
 
-    if (!page || page < 1) {
+    if (!rowCount || rowCount < 1) {
       await window.electronAPI.showAlert('問い合わせ番号抽出行数を1以上の数値で入力してください');
       return;
     }
 
-    await window.electronAPI.startInquiryCsvCreation(page);
+    // 進行状況をリセットして表示
+    document.getElementById('inquiry-csv-progress').style.display = 'block';
+    document.getElementById('inquiry-progress-bar-fill').style.width = '0%';
+    document.getElementById('inquiry-progress-text').textContent = `0 / ${rowCount} 件取得`;
+    document.getElementById('inquiry-progress-log').innerHTML = '';
+
+    const result = await window.electronAPI.startInquiryCsvCreation(rowCount);
+
+    if (result.success) {
+      addInquiryProgressLog(`完了: ${result.count} 件をCSVに保存しました`, 'success');
+    } else if (!result.canceled) {
+      addInquiryProgressLog(`エラー: ${result.error}`, 'error');
+      await window.electronAPI.showAlert(`エラーが発生しました: ${result.error}`);
+    }
   });
+
+  window.electronAPI.onInquiryProgress((_event, progress) => {
+    const { current, total, message, status } = progress;
+
+    document.getElementById('inquiry-csv-progress').style.display = 'block';
+
+    const percentage = total > 0 ? (current / total) * 100 : 0;
+    document.getElementById('inquiry-progress-bar-fill').style.width = `${percentage}%`;
+    document.getElementById('inquiry-progress-text').textContent = `${current} / ${total} 件取得`;
+
+    if (message) {
+      addInquiryProgressLog(message, status || 'info');
+    }
+  });
+}
+
+function addInquiryProgressLog(message, status = 'info') {
+  const progressLog = document.getElementById('inquiry-progress-log');
+  const time = new Date().toLocaleTimeString('ja-JP');
+
+  const statusColors = { success: '#27ae60', error: '#e74c3c', info: '#666' };
+  const color = statusColors[status] || statusColors.info;
+
+  const logLine = document.createElement('div');
+  logLine.style.color = color;
+  logLine.style.marginBottom = '4px';
+  logLine.textContent = `[${time}] ${message}`;
+
+  progressLog.appendChild(logLine);
+  progressLog.scrollTop = progressLog.scrollHeight;
 }
 
 // ボタンの表示状態を更新

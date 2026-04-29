@@ -472,6 +472,17 @@
         </div>
 
         <button id="btn-create-inquiry-csv" class="btn btn-primary btn-large">CSVファイル作成</button>
+
+        <!-- 進行状況 -->
+        <div id="inquiry-csv-progress" style="display: none; margin-top: 20px;">
+          <div style="background: #f8f9fa; border-radius: 4px; padding: 16px;">
+            <div style="background: #e9ecef; border-radius: 8px; height: 24px; overflow: hidden; margin-bottom: 12px;">
+              <div id="inquiry-progress-bar-fill" style="background: linear-gradient(90deg, #3498db, #5dade2); height: 100%; width: 0%; transition: width 0.3s;"></div>
+            </div>
+            <div id="inquiry-progress-text" style="font-size: 14px; font-weight: 600; color: #2c3e50; margin-bottom: 8px;">0 / 0 件取得</div>
+            <div id="inquiry-progress-log" style="max-height: 200px; overflow-y: auto; font-size: 13px; color: #666;"></div>
+          </div>
+        </div>
       </section>
 
       <!-- セクション2: 問い合わせ番号連携 -->
