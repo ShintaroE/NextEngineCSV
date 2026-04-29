@@ -45,7 +45,7 @@ npm run build
 [API/Data Layer]
   ├─ nextengine-api.js - ネクストエンジンAPI通信、ログ管理
   ├─ clickpost-automation.js - Playwright自動化（遅延ロード: 初回呼び出し時のみ require）
-  └─ data/*.json - 永続化データ（認証情報、マスタ）
+  └─ data/*.json - 永続化データ（認証情報、マスタ、決済設定）
 ```
 
 ### 主要ファイルの責務
@@ -100,23 +100,32 @@ loadClickPostCsv() → Promise<{success, data, fileName, rowCount}>
 startClickPostAutomation(csvData) → Promise<{success}>
 stopClickPostAutomation() → Promise<{success}>
 onClickPostProgress(callback) → void  // IPC イベントリスナー (clickpost:progress)
+loadClickPostConfig() → Promise<{cardLast4, cvv}>
+saveClickPostConfig(config) → Promise<{success}>
 ```
 
 ## データファイル管理
 
 ### ポータブルビルド対応
 
-データファイルの読み込み優先順位（[main.js:8-30](main.js#L8-L30)）:
+データファイルの読み込み優先順位（[main.js:18-31](main.js#L18-L31)）:
 
 1. **ビルド時**: `exe同じフォルダのdata/`
 2. **開発時**: `プロジェクトルートのdata/`
 3. **フォールバック**: `AppData/Roaming/NextEngineCSV/data/`
+
+`clickpost-automation.js`の`getSelectorsPath()`と`getBrowserProfilePath()`も同じロジックで解決する。
 
 ### データファイル
 
 - `data/auth.json` - 認証情報（client_id, client_secret, access_token, refresh_token）
 - `data/master-data.json` - 商品マスタ（`{masters: [{code, name}, ...]}`形式）
 - `data/demo-data.json` - デモ用注文データ（開発/テスト用、`{orders: [...]}`形式）
+- `data/clickpost-config.json` - クリックポスト決済設定（`{cardLast4, cvv}`形式）
+
+### ブラウザプロファイル
+
+`browser-profile/` ディレクトリに Playwright 永続コンテキストのプロファイルを保存。Yahoo!ウォレットへのログイン状態がここに保持されるため、2回目以降は手動ログインが省略される場合がある。ポータブルビルド時は`exe同じフォルダ/browser-profile/`に配置される。
 
 ## 主要機能
 
@@ -143,15 +152,13 @@ onClickPostProgress(callback) → void  // IPC イベントリスナー (clickpo
 
 ### 4. クリックポスト自動決済（クリックポストタブ）
 
-- **CSV読み込み**: ネクストエンジンから出力したCSVを読み込み
-- **データプレビュー**: 最初の10件をテーブル表示
-- **自動決済実行**: Playwrightでブラウザ自動操作
-  - 手動ログイン待機（Yahoo!/Amazon Pay）
-  - フォーム自動入力（郵便番号、氏名、住所、商品名）
-  - 決済ボタン自動クリック
-- **進行状況表示**: リアルタイムプログレスバー、ログ表示
-- **停止機能**: 処理中断可能
-- **セレクター設定**: [clickpost-selectors.json](clickpost-selectors.json)でカスタマイズ可能
+自動化は3フェーズで実行される（[clickpost-automation.js:95-221](clickpost-automation.js#L95-L221)）:
+
+1. **Phase 1 - 初期化**: Chrome/Edge/Chromium の順でブラウザ起動、`clickpost.jp` にアクセス、マイページURLへの遷移を確認して手動ログイン完了を待機（タイムアウト5分）
+2. **Phase 2 - CSVアップロード**: ネクストエンジンCSVデータからクリックポスト形式の一時CSVを作成しShift-JIS保存、「まとめ申込」ページでCSVをアップロード・取込確定
+3. **Phase 3 - 決済処理**: ラベル一覧から1件ずつ Yahoo!ウォレット決済ボタンをクリック。カード下4桁（ラベル照合）・CVV入力 → 規約同意チェック → 「次へ」→「支払手続き確定」の順で操作
+
+停止は `isStopped` フラグで制御。エラー行はスキップして次へ続行。
 
 ### 5. ログ出力（ログ出力タブ）
 
@@ -168,46 +175,6 @@ onClickPostProgress(callback) → void  // IPC イベントリスナー (clickpo
 
 ## 開発時のポイント
 
-### イベント委譲パターン
-
-マスタテーブルのボタン処理は委譲で実装（[renderer.js:68-75](renderer.js#L68-L75)）:
-
-```javascript
-document.getElementById('master-table-body').addEventListener('click', (e) => {
-  const btn = e.target.closest('button[data-action]');
-  if (!btn) return;
-  const { action, code, name } = btn.dataset;
-  if (action === 'edit')   editMaster(code, name);
-  if (action === 'delete') deleteMaster(code);
-});
-```
-
-### トークンリフレッシュ
-
-`nextengine-api.js`でAPI通信時に自動でトークンを更新（[nextengine-api.js:240-245](nextengine-api.js#L240-L245)）:
-
-```javascript
-// レスポンスから新トークンを取得して保存
-if (result.access_token && result.refresh_token) {
-  auth.access_token = result.access_token;
-  auth.refresh_token = result.refresh_token;
-  saveAuthData(auth);
-}
-```
-
-### CSV分割ロジック
-
-40行超の場合、自動分割（[renderer.js:402-430](renderer.js#L402-L430)）:
-
-```javascript
-const MAX_ROWS_PER_FILE = 40;
-if (rows.length <= MAX_ROWS_PER_FILE) {
-  // 単一ファイル保存
-} else {
-  // ファイル名に _1, _2 を付与して分割保存
-}
-```
-
 ### クリックポストセレクターの調整
 
 [clickpost-selectors.json](clickpost-selectors.json) でセレクターをカスタマイズ:
@@ -216,20 +183,9 @@ if (rows.length <= MAX_ROWS_PER_FILE) {
 2. フォーム要素の`name`属性、`id`属性、`class`名を取得
 3. JSONファイルのセレクターを実際のものに更新
 
-```json
-{
-  "labelForm": {
-    "postalCode": "input[name='postal_code']",  // 実際のname属性に合わせる
-    "recipientName": "input[id='recipient_name']"
-  }
-}
-```
+複数セレクターをカンマ区切りで指定可能（フォールバック対応）。`clickMulti`/`fillInputMulti`/`waitForSelectorMulti` は全てカンマ区切りで複数セレクターを順に試す設計。
 
-複数セレクターをカンマ区切りで指定可能（フォールバック対応）:
-
-```json
-"postalCode": "input[name='postal_code'], input[id='postal'], #postalCode"
-```
+詳細セットアップ手順は [CLICKPOST_SETUP.md](CLICKPOST_SETUP.md) を参照。
 
 ## ネクストエンジンAPI
 
@@ -246,4 +202,3 @@ if (rows.length <= MAX_ROWS_PER_FILE) {
 - **productName**: `NextEngineCSV`
 - **出力先**: `dist/`
 - **ターゲット**: Windows Portable (x64 + ia32)
-
