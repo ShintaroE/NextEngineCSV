@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const iconv = require('iconv-lite');
 const nextengineApi = require('./nextengine-api');
+const inquiryLinking = require('./inquiry-linking');
 
 // Windows コンソールのUTF-8対応
 if (process.platform === 'win32') {
@@ -501,6 +502,7 @@ ipcMain.handle('csv:saveMultiple', async (event, csvContents) => {
 
 let inquiryAutomation = null;
 let mainWindowForInquiryProgress = null;
+let mainWindowForInquiryLink = null;
 
 // IPC ハンドラー: 問い合わせ番号CSVファイル作成（スクレイピング→CSV保存）
 ipcMain.handle('inquiry:startCsvCreation', async (event, rowCount) => {
@@ -548,6 +550,55 @@ ipcMain.handle('inquiry:startCsvCreation', async (event, rowCount) => {
     return { success: true, count: data.length };
   } catch (error) {
     console.error('問い合わせ番号CSV作成エラー:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// IPC ハンドラー: 問い合わせ番号連携用CSVを読み込む
+ipcMain.handle('inquiry:loadLinkCsv', async () => {
+  try {
+    const result = await dialog.showOpenDialog({
+      title: '問い合わせ番号CSVファイルを選択',
+      filters: [{ name: 'CSVファイル', extensions: ['csv'] }],
+      properties: ['openFile']
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false, canceled: true };
+    }
+
+    const filePath = result.filePaths[0];
+    let content;
+    try {
+      const buffer = fs.readFileSync(filePath);
+      content = iconv.decode(buffer, 'Shift_JIS');
+    } catch {
+      content = fs.readFileSync(filePath, 'utf-8');
+    }
+
+    const { data, rowCount } = inquiryLinking.parseLinkCsv(content);
+    return { success: true, data, rowCount };
+  } catch (error) {
+    console.error('問い合わせ番号連携CSV読み込みエラー:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// IPC ハンドラー: 問い合わせ番号をネクストエンジンに連携
+ipcMain.handle('inquiry:startLinking', async (event, csvData) => {
+  mainWindowForInquiryLink = BrowserWindow.fromWebContents(event.sender);
+
+  const sendProgress = (current, total, message, status = 'info') => {
+    if (mainWindowForInquiryLink && !mainWindowForInquiryLink.isDestroyed()) {
+      mainWindowForInquiryLink.webContents.send('inquiry:linkProgress', { current, total, message, status });
+    }
+  };
+
+  try {
+    const { successCount, errorCount } = await inquiryLinking.runLinking(csvData, sendProgress);
+    return { success: true, successCount, errorCount };
+  } catch (error) {
+    console.error('問い合わせ番号連携エラー:', error);
     return { success: false, error: error.message };
   }
 });

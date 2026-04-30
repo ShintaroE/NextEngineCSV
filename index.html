@@ -497,22 +497,16 @@
           <span id="inquiry-link-csv-info" style="margin-left: 12px; color: #666; font-size: 14px;"></span>
         </div>
 
-        <!-- 連携実行 -->
-        <div id="inquiry-link-action" style="display: none; margin-bottom: 16px;">
-          <div id="inquiry-link-summary" style="background: #f0f4f8; border: 1px solid #d0d9e3; border-radius: 4px; padding: 10px 14px; margin-bottom: 12px; font-size: 14px; color: #444;"></div>
-          <button id="btn-start-inquiry-link" class="btn btn-success btn-large">連携を開始</button>
-        </div>
-
         <!-- 進行状況 -->
         <div id="inquiry-link-progress" style="display: none;">
           <div style="background: #f8f9fa; border-radius: 4px; padding: 16px;">
             <div style="background: #e9ecef; border-radius: 8px; height: 24px; overflow: hidden; margin-bottom: 12px;">
-              <div id="inquiry-progress-bar-fill" style="background: linear-gradient(90deg, #27ae60, #2ecc71); height: 100%; width: 0%; transition: width 0.3s;"></div>
+              <div id="inquiry-link-bar-fill" style="background: linear-gradient(90deg, #27ae60, #2ecc71); height: 100%; width: 0%; transition: width 0.3s;"></div>
             </div>
-            <div id="inquiry-progress-text" style="font-size: 14px; font-weight: 600; color: #2c3e50; margin-bottom: 8px;">
+            <div id="inquiry-link-text" style="font-size: 14px; font-weight: 600; color: #2c3e50; margin-bottom: 8px;">
               0 / 0 件処理完了
             </div>
-            <div id="inquiry-progress-log" style="max-height: 200px; overflow-y: auto; font-size: 13px; color: #666;">
+            <div id="inquiry-link-log" style="max-height: 200px; overflow-y: auto; font-size: 13px; color: #666;">
               <!-- ログはJSで動的に追加 -->
             </div>
           </div>

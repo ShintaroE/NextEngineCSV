@@ -26,6 +26,7 @@ function getEndpointName(endpoint) {
   const names = {
     '/api_v1_receiveorder_base/search': '受注伝票検索',
     '/api_v1_receiveorder_base/count': '受注伝票件数',
+    '/api_v1_receiveorder_base/update': '受注伝票更新',
     '/api_v1_receiveorder_row/search': '受注明細検索',
     '/api_neauth': '認証トークン取得'
   };

@@ -8,3 +8,5 @@ data/*
 .DS_Store
 
 browser-profile
+.playwright-mcp
+update-api-snapshot.txt

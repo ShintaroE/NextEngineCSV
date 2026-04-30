@@ -899,10 +899,67 @@ function initInquiryFeature() {
       addInquiryProgressLog(message, status || 'info');
     }
   });
+
+  // Section 2: 問い合わせ番号連携
+  document.getElementById('btn-load-inquiry-link-csv').addEventListener('click', async () => {
+    const result = await window.electronAPI.loadInquiryLinkCsv();
+    if (!result.success) {
+      if (!result.canceled) await window.electronAPI.showAlert(`エラー: ${result.error}`);
+      return;
+    }
+
+    document.getElementById('inquiry-link-csv-info').textContent = `${result.rowCount}件読み込み完了`;
+
+    const confirmed = await window.electronAPI.showConfirm(`${result.rowCount}件のデータをネクストエンジンに連携しますか？`);
+    if (!confirmed) return;
+
+    document.getElementById('inquiry-link-progress').style.display = 'block';
+    document.getElementById('inquiry-link-bar-fill').style.width = '0%';
+    document.getElementById('inquiry-link-text').textContent = `0 / ${result.rowCount} 件処理完了`;
+    document.getElementById('inquiry-link-log').innerHTML = '';
+
+    const linkResult = await window.electronAPI.startInquiryLinking(result.data);
+
+    if (linkResult.success) {
+      await window.electronAPI.showAlert(`完了: ${linkResult.successCount}件成功、${linkResult.errorCount}件失敗`);
+    } else if (linkResult.error) {
+      await window.electronAPI.showAlert(`エラー: ${linkResult.error}`);
+    }
+  });
+
+  window.electronAPI.onInquiryLinkProgress((_event, progress) => {
+    const { current, total, message, status } = progress;
+
+    document.getElementById('inquiry-link-progress').style.display = 'block';
+
+    const pct = total > 0 ? (current / total) * 100 : 0;
+    document.getElementById('inquiry-link-bar-fill').style.width = `${pct}%`;
+    document.getElementById('inquiry-link-text').textContent = `${current} / ${total} 件処理完了`;
+
+    if (message) {
+      addInquiryLinkLog(message, status || 'info');
+    }
+  });
 }
 
 function addInquiryProgressLog(message, status = 'info') {
   const progressLog = document.getElementById('inquiry-progress-log');
+  const time = new Date().toLocaleTimeString('ja-JP');
+
+  const statusColors = { success: '#27ae60', error: '#e74c3c', info: '#666' };
+  const color = statusColors[status] || statusColors.info;
+
+  const logLine = document.createElement('div');
+  logLine.style.color = color;
+  logLine.style.marginBottom = '4px';
+  logLine.textContent = `[${time}] ${message}`;
+
+  progressLog.appendChild(logLine);
+  progressLog.scrollTop = progressLog.scrollHeight;
+}
+
+function addInquiryLinkLog(message, status = 'info') {
+  const progressLog = document.getElementById('inquiry-link-log');
   const time = new Date().toLocaleTimeString('ja-JP');
 
   const statusColors = { success: '#27ae60', error: '#e74c3c', info: '#666' };
