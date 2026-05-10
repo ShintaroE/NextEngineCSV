@@ -348,9 +348,9 @@ ipcMain.handle('clickpost:startAutomation', async (event, csvData) => {
     });
 
     // 自動決済を実行
-    await clickpostAutomation.start(csvData);
+    const { successCount, errorCount } = await clickpostAutomation.start(csvData);
 
-    return { success: true };
+    return { success: true, successCount, errorCount };
   } catch (error) {
     console.error('クリックポスト自動決済エラー:', error);
     return { success: false, error: error.message };

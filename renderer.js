@@ -797,6 +797,7 @@ async function startAutomation() {
   }
 
   // 完了
+  await window.electronAPI.showAlert(`完了: ${result.successCount}件成功、${result.errorCount}件失敗`);
   isAutomationRunning = false;
   updateAutomationButtons();
 }

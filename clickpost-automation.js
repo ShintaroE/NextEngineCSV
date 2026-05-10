@@ -183,6 +183,9 @@ class ClickPostAutomation {
       this.sendProgress(0, total, 'CSV取込完了。決済処理を開始します...', 'success');
 
       // ========== Phase 3: 決済処理 ==========
+      let successCount = 0;
+      let errorCount = 0;
+
       for (let i = 0; i < total; i++) {
         if (this.isStopped) {
           this.sendProgress(i, total, '処理が停止されました', 'error');
@@ -193,16 +196,25 @@ class ClickPostAutomation {
           await this.processPayment(i + 1, total);
           const name = csvData[i]['お届け先氏名'] || csvData[i]['氏名'] || '';
           this.sendProgress(i + 1, total, `${i + 1}件目: ${name}の決済が完了しました`, 'success');
+          successCount++;
         } catch (error) {
           this.sendProgress(i + 1, total, `${i + 1}件目: エラー - ${error.message}`, 'error');
-          // エラーが発生しても次の行に進む
+          errorCount++;
+          // エラー後にページを決済一覧へ戻して次の件に備える
+          try {
+            await this.page.goto(this.selectors.urls.multiplePayment);
+            await this.page.waitForLoadState('networkidle');
+          } catch (navError) {
+            console.warn('決済一覧への復帰に失敗しました:', navError.message);
+          }
         }
 
         // ネットワークが安定するまで待機
         await this.page.waitForLoadState('networkidle');
       }
 
-      this.sendProgress(total, total, 'すべての処理が完了しました！', 'success');
+      this.sendProgress(total, total, `すべての処理が完了しました！（${successCount}件成功・${errorCount}件失敗）`, 'success');
+      return { successCount, errorCount };
 
     } catch (error) {
       this.sendProgress(0, csvData.length, `エラーが発生しました: ${error.message}`, 'error');
