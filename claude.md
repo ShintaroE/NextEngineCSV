@@ -204,6 +204,39 @@ onInquiryLinkProgress(callback) → void  // IPC イベントリスナー (inqui
 
 ## 開発時のポイント
 
+### 開発者ツールの有効化
+
+[main.js:90](main.js#L90) の以下の行をアンコメントすると DevTools が起動時に開く:
+
+```javascript
+mainWindow.webContents.openDevTools();
+```
+
+### 受注ステータスIDの対応表
+
+`receive_order_order_status_id` の値（固定検索条件 `'0,2,20'` で使用）:
+
+| ID | 意味 |
+|----|------|
+| 0  | 保留中 |
+| 2  | 確認済み |
+| 20 | 一部発送 |
+
+### IPC通信パターンの使い分け
+
+- **`ipcRenderer.invoke`**: 呼び出し→応答の1回限りの通信（ほぼ全API）
+- **`ipcRenderer.on`**: メインプロセスからのプッシュ通知（`onClickPostProgress`・`onInquiryProgress`・`onInquiryLinkProgress`）
+
+自動化処理中の進行状況はプッシュ型のため、`on`登録後でないと進行状況が受け取れない。
+
+### 問い合わせ番号更新時の副作用
+
+`inquiry-linking.js` の `updateTrackingNumber` は `receive_order_shipped_update_flag: '1'` を同時に送信するため、NEの受注ステータスが「出荷済み」に変更される。意図しないステータス変更に注意。
+
+### 自動化モジュールのレイジーロード
+
+`ClickPostAutomation` と `InquiryAutomation` クラスは、各 IPC ハンドラー内で初回呼び出し時に `require()` される（アプリ起動時ではない）。セレクターJSONが読み込めない場合はクラスのコンストラクタで例外が発生する。
+
 ### セレクターの調整
 
 `clickpost-selectors.json` / `inquiry-selectors.json` でセレクターをカスタマイズ:
