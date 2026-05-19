@@ -1,28 +1,32 @@
 const nextengineApi = require('./nextengine-api');
 
 /**
- * 氏名で受注伝票を検索（既存の4条件 + 氏名完全一致）
- * @param {string} name - 送り先氏名
- * @returns {Array} 受注伝票リスト
+ * CSV氏名リストをIN条件で一括検索し、Map<氏名, 伝票[]> を返す
+ * @param {string[]} names - 検索対象の氏名リスト（重複あり可）
+ * @returns {{ nameMap: Map, totalFetched: number }}
  */
-async function searchOrderByName(name) {
-  const fields = [
-    'receive_order_id',
-    'receive_order_last_modified_date',
-    'receive_order_consignee_name'
-  ].join(',');
+async function fetchOrderNameMap(names) {
+  const uniqueNames = [...new Set(names)];
 
-  const params = {
-    fields,
+  const result = await nextengineApi.callApi('/api_v1_receiveorder_base/search', {
+    fields: 'receive_order_id,receive_order_last_modified_date,receive_order_consignee_name',
     'receive_order_order_status_id-in': '0,2,20',
     'receive_order_confirm_check_id-eq': '1',
     'receive_order_cancel_type_id-eq': '0',
     'receive_order_deposit_type_id-eq': '2',
-    'receive_order_consignee_name-eq': name
-  };
+    'receive_order_consignee_name-in': uniqueNames.join(','),
+  });
 
-  const result = await nextengineApi.callApi('/api_v1_receiveorder_base/search', params);
-  return result.data || [];
+  const orders = result.data || [];
+
+  const nameMap = new Map();
+  for (const order of orders) {
+    const name = order.receive_order_consignee_name;
+    if (!nameMap.has(name)) nameMap.set(name, []);
+    nameMap.get(name).push(order);
+  }
+
+  return { nameMap, totalFetched: orders.length };
 }
 
 /**
@@ -41,7 +45,7 @@ async function updateTrackingNumber(orderId, lastModifiedDate, trackingNumber) {
     'data': xml
   };
 
-  return await nextengineApi.callApi('/api_v1_receiveorder_base/update', params);
+  return nextengineApi.callApi('/api_v1_receiveorder_base/update', params);
 }
 
 /**
@@ -76,12 +80,16 @@ async function runLinking(csvData, sendProgress) {
   let successCount = 0;
   let errorCount = 0;
 
+  sendProgress(0, total, 'CSV氏名で伝票を一括検索しています...', 'info');
+  const { nameMap, totalFetched } = await fetchOrderNameMap(csvData.map(r => r.name));
+  sendProgress(0, total, `${totalFetched}件の伝票を取得しました。照合を開始します...`, 'success');
+
   for (let i = 0; i < csvData.length; i++) {
     const { name, inquiryNumber } = csvData[i];
-    sendProgress(i, total, `${i + 1}件目: 「${name}」を検索中...`, 'info');
+    sendProgress(i, total, `${i + 1}件目: 「${name}」を照合中...`, 'info');
 
     try {
-      const orders = await searchOrderByName(name);
+      const orders = nameMap.get(name) || [];
 
       if (orders.length === 0) {
         sendProgress(i + 1, total, `${i + 1}件目: 「${name}」— 伝票が見つかりませんでした`, 'error');
