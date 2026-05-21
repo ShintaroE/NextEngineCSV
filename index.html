@@ -511,6 +511,17 @@
             </div>
           </div>
         </div>
+
+        <!-- エラーサマリーパネル -->
+        <div id="inquiry-link-error-panel" style="display: none; margin-top: 16px; border: 1px solid #e74c3c; border-radius: 4px; overflow: hidden;">
+          <div style="background: #fdf0ef; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: #c0392b; font-weight: 600;">⚠ エラーになった氏名（<span id="inquiry-link-error-count">0</span>件）</span>
+            <button id="btn-copy-error-names" class="btn btn-secondary" style="padding: 4px 12px; font-size: 13px;">コピー</button>
+          </div>
+          <ul id="inquiry-link-error-list" style="margin: 0; padding: 10px 16px 10px 32px; font-size: 14px; color: #2c3e50; max-height: 160px; overflow-y: auto;">
+            <!-- エラー氏名はJSで動的に追加 -->
+          </ul>
+        </div>
       </section>
     </div>
 

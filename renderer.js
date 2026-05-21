@@ -918,11 +918,16 @@ function initInquiryFeature() {
     document.getElementById('inquiry-link-bar-fill').style.width = '0%';
     document.getElementById('inquiry-link-text').textContent = `0 / ${result.rowCount} 件処理完了`;
     document.getElementById('inquiry-link-log').innerHTML = '';
+    document.getElementById('inquiry-link-error-panel').style.display = 'none';
+    document.getElementById('inquiry-link-error-list').innerHTML = '';
 
     const linkResult = await window.electronAPI.startInquiryLinking(result.data);
 
     if (linkResult.success) {
       await window.electronAPI.showAlert(`完了: ${linkResult.successCount}件成功、${linkResult.errorCount}件失敗`);
+      if (linkResult.errorNames && linkResult.errorNames.length > 0) {
+        showInquiryLinkErrorPanel(linkResult.errorNames);
+      }
     } else if (linkResult.error) {
       await window.electronAPI.showAlert(`エラー: ${linkResult.error}`);
     }
@@ -958,6 +963,19 @@ function addInquiryProgressLog(message, status = 'info') {
   progressLog.appendChild(logLine);
   progressLog.scrollTop = progressLog.scrollHeight;
 }
+
+function showInquiryLinkErrorPanel(errorNames) {
+  document.getElementById('inquiry-link-error-count').textContent = errorNames.length;
+  const list = document.getElementById('inquiry-link-error-list');
+  list.innerHTML = errorNames.map(name => `<li>${escapeHtml(name)}</li>`).join('');
+  document.getElementById('inquiry-link-error-panel').style.display = 'block';
+}
+
+document.getElementById('btn-copy-error-names').addEventListener('click', () => {
+  const items = document.querySelectorAll('#inquiry-link-error-list li');
+  const text = Array.from(items).map(li => li.textContent).join('\n');
+  navigator.clipboard.writeText(text);
+});
 
 function addInquiryLinkLog(message, status = 'info') {
   const progressLog = document.getElementById('inquiry-link-log');

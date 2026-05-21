@@ -630,8 +630,8 @@ ipcMain.handle('inquiry:startLinking', async (event, csvData) => {
   };
 
   try {
-    const { successCount, errorCount } = await inquiryLinking.runLinking(csvData, sendProgress);
-    return { success: true, successCount, errorCount };
+    const { successCount, errorCount, errorNames } = await inquiryLinking.runLinking(csvData, sendProgress);
+    return { success: true, successCount, errorCount, errorNames };
   } catch (error) {
     console.error('問い合わせ番号連携エラー:', error);
     return { success: false, error: error.message };

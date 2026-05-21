@@ -79,6 +79,7 @@ async function runLinking(csvData, sendProgress) {
   const total = csvData.length;
   let successCount = 0;
   let errorCount = 0;
+  const errorNames = [];
 
   sendProgress(0, total, 'CSV氏名で伝票を一括検索しています...', 'info');
   const { nameMap, totalFetched } = await fetchOrderNameMap(csvData.map(r => r.name));
@@ -93,6 +94,7 @@ async function runLinking(csvData, sendProgress) {
 
       if (orders.length === 0) {
         sendProgress(i + 1, total, `${i + 1}件目: 「${name}」— 伝票が見つかりませんでした`, 'error');
+        errorNames.push(name);
         errorCount++;
         continue;
       }
@@ -109,11 +111,12 @@ async function runLinking(csvData, sendProgress) {
       successCount++;
     } catch (err) {
       sendProgress(i + 1, total, `${i + 1}件目: 「${name}」— エラー: ${err.message}`, 'error');
+      errorNames.push(name);
       errorCount++;
     }
   }
 
-  return { successCount, errorCount };
+  return { successCount, errorCount, errorNames };
 }
 
 module.exports = {
