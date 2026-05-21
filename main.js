@@ -273,6 +273,41 @@ ipcMain.handle('log:clear', () => {
 let clickpostAutomation = null;
 let mainWindowForProgress = null;
 
+// RFC 4180準拠のCSV行パーサー（クォート内カンマ・改行対応）
+function parseCSVRow(line) {
+  const fields = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        // "" はエスケープされたクォート
+        if (line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        current += ch;
+      }
+    } else {
+      if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ',') {
+        fields.push(current.trim());
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+  }
+  fields.push(current.trim());
+  return fields;
+}
+
 // IPC ハンドラー: クリックポスト用CSVを読み込む
 ipcMain.handle('clickpost:loadCsv', async (event) => {
   try {
@@ -308,12 +343,12 @@ ipcMain.handle('clickpost:loadCsv', async (event) => {
     }
 
     // ヘッダー行を解析
-    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    const headers = parseCSVRow(lines[0]);
 
     // データ行をパース
     const data = [];
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+      const values = parseCSVRow(lines[i]);
       const row = {};
       headers.forEach((header, index) => {
         row[header] = values[index] || '';
