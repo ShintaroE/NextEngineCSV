@@ -112,7 +112,7 @@ saveClickPostConfig(config) → Promise<{success}>
 startInquiryCsvCreation(rowCount) → Promise<{success, count?, canceled?, error?}>
 onInquiryProgress(callback) → void  // IPC イベントリスナー (inquiry:progress)
 loadInquiryLinkCsv() → Promise<{success, data?, rowCount?, canceled?, error?}>
-startInquiryLinking(csvData) → Promise<{success, successCount?, errorCount?, error?}>
+startInquiryLinking(csvData) → Promise<{success, successCount?, errorCount?, errorNames?, error?}>
 onInquiryLinkProgress(callback) → void  // IPC イベントリスナー (inquiry:linkProgress)
 ```
 
