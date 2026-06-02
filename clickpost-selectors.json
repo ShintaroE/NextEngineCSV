@@ -9,7 +9,8 @@
     "mypage": "https://clickpost.jp/mypage",
     "newLabel": "https://clickpost.jp/mypage/new",
     "bulkUpload": "https://clickpost.jp/mypage/import",
-    "multiplePayment": "https://clickpost.jp/labels/multiple_payment"
+    "multiplePayment": "https://clickpost.jp/labels/multiple_payment",
+    "walletBase": "https://wallet-link.fep.sbps.jp/order"
   },
 
   "login": {
@@ -73,6 +74,7 @@
     "finalConfirmButton": "input.ui-button[value='支払手続き確定'], input[value='支払手続き確定']",
     "cvvInput": "input#cvv, input[name='cvv'], input.form-control[name*='cvv']",
     "cardRadioButtons": "input.form-check-input[type='radio'][id^='wallet-credit-card']",
-    "cardLabels": "label.form-check-label[for^='wallet-credit-card']"
+    "cardLabels": "label.form-check-label[for^='wallet-credit-card']",
+    "walletKeyInput": "input[type='hidden'][name='key']"
   }
 }

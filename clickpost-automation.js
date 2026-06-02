@@ -14,6 +14,7 @@ class ClickPostAutomation {
     this.progressCallback = null;
     this.isStopped = false;
     this.tempFilePath = null;
+    this.currentPaymentUrl = null;
 
     // セレクター設定を読み込む（必須）
     const selectorsPath = ClickPostAutomation.getSelectorsPath();
@@ -197,16 +198,32 @@ class ClickPostAutomation {
           const name = csvData[i]['お届け先氏名'] || csvData[i]['氏名'] || '';
           this.sendProgress(i + 1, total, `${i + 1}件目: ${name}の決済が完了しました`, 'success');
           successCount++;
+          this.currentPaymentUrl = null;
         } catch (error) {
           this.sendProgress(i + 1, total, `${i + 1}件目: エラー - ${error.message}`, 'error');
           errorCount++;
-          // エラー後にページを決済一覧へ戻して次の件に備える
-          try {
-            await this.page.goto(this.selectors.urls.multiplePayment);
-            await this.page.waitForLoadState('networkidle');
-          } catch (navError) {
-            console.warn('決済一覧への復帰に失敗しました:', navError.message);
+
+          if (this.currentPaymentUrl) {
+            this.sendProgress(i + 1, total, `${i + 1}件目: ウォレットURLから再試行します...`, 'info');
+            try {
+              await this.page.goto(this.currentPaymentUrl);
+              await this.page.waitForLoadState('networkidle');
+              await this.executePaymentFlow(i + 1, total);
+              const name = csvData[i]['お届け先氏名'] || csvData[i]['氏名'] || '';
+              this.sendProgress(i + 1, total, `${i + 1}件目: ${name}の決済が完了しました（再試行）`, 'success');
+              errorCount--;
+              successCount++;
+            } catch (retryError) {
+              this.sendProgress(i + 1, total, `${i + 1}件目: 再試行失敗 - ${retryError.message}`, 'error');
+              await this.navigateToPaymentList(i + 1, total);
+              this.sendProgress(i + 1, total, '決済一覧に戻りました。次の件を処理します...', 'info');
+            }
+          } else {
+            await this.navigateToPaymentList(i + 1, total);
+            this.sendProgress(i + 1, total, '決済一覧に戻りました。次の件を処理します...', 'info');
           }
+
+          this.currentPaymentUrl = null;
         }
 
         // ネットワークが安定するまで待機
@@ -346,12 +363,41 @@ class ClickPostAutomation {
   async processPayment(currentIndex, total) {
     this.sendProgress(currentIndex - 1, total, `${currentIndex}件目: Yahoo!ウォレット決済ボタンを探しています...`, 'info');
 
+    // ウォレットURLを取得して保存（エラー時の再試行用）
+    this.currentPaymentUrl = await this.extractWalletUrl();
+    if (this.currentPaymentUrl) {
+      console.log(`[WalletUrl] Extracted: ${this.currentPaymentUrl}`);
+    }
+
     // 「お支払い手続きへ」ボタンをクリック（Yahoo!ウォレット）
     await this.waitForSelectorMulti(this.selectors.paymentList.yahooWalletButton, 30000);
     await this.clickMulti(this.selectors.paymentList.yahooWalletButton);
     await this.page.waitForLoadState('networkidle');
 
-    // 決済確認ページで規約同意と「次へ」をクリック
+    await this.executePaymentFlow(currentIndex, total);
+  }
+
+  /**
+   * ウォレットページのURLをmultiple_paymentページのhidden inputから取得
+   */
+  async extractWalletUrl() {
+    try {
+      const keyInput = await this.page.$(this.selectors.paymentList.walletKeyInput);
+      if (!keyInput) return null;
+      const keyValue = await keyInput.getAttribute('value');
+      if (!keyValue) return null;
+      return `${this.selectors.urls.walletBase}?key=${encodeURIComponent(keyValue)}`;
+    } catch (error) {
+      console.warn('[WalletUrl] キー取得失敗:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * ウォレットページでのCVV入力〜決済確定フロー
+   * processPayment から直接呼ぶほか、再試行時にも使用する
+   */
+  async executePaymentFlow(currentIndex, total) {
     this.sendProgress(currentIndex - 1, total, `${currentIndex}件目: 支払いを確定しています...`, 'info');
 
     try {
@@ -401,7 +447,7 @@ class ClickPostAutomation {
     const isSuccess = await this.isPaymentSuccessful();
     if (isSuccess) {
       console.log('[Payment] Payment completed successfully');
-      return; // 成功の場合はエラーチェックをスキップ
+      return;
     }
 
     // エラーチェック（成功でない場合のみ）
@@ -683,6 +729,26 @@ class ClickPostAutomation {
     } catch (error) {
       return 'エラーが発生しました';
     }
+  }
+
+  /**
+   * 決済一覧ページへ復帰（リトライ付き）
+   * 全リトライ失敗時は throw してループを停止する
+   */
+  async navigateToPaymentList(currentIndex, total, retries = 3) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        await this.page.goto(this.selectors.urls.multiplePayment);
+        await this.page.waitForLoadState('networkidle');
+        return;
+      } catch (error) {
+        this.sendProgress(currentIndex, total, `決済一覧への復帰失敗 (${attempt}/${retries}): ${error.message}`, 'error');
+        if (attempt < retries) {
+          await this.page.waitForTimeout(2000 * attempt);
+        }
+      }
+    }
+    throw new Error('決済一覧への復帰に失敗しました。処理を中断します。');
   }
 
   /**
