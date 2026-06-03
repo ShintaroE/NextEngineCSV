@@ -144,10 +144,11 @@ onInquiryLinkProgress(callback) → void  // IPC イベントリスナー (inqui
 ### 1. 受注検索・CSV出力（検索タブ）
 
 - 固定検索条件: ステータス（保留中/確認/一部発送）、確認済み、キャンセルなし、入金済み
+- 選択行を`quantity`の個数分だけ行展開してから出力（quantity=3なら3行に複製）
 - **40行以下**: 単一CSV
 - **41行以上**: 自動分割（`_1.csv`, `_2.csv`...）
 - 住所を20文字×4行に分割（[renderer.js:328](renderer.js#L328) `splitAddress`）
-- 重複配送先に`◎`マーク付与（[renderer.js:385](renderer.js#L385)）
+- 同一氏名が2件以上あれば「重複」列に`◎`マーク付与（[renderer.js:385](renderer.js#L385)）。住所ではなく**氏名**で判定
 - Shift_JISエンコード（`iconv-lite`使用）
 
 ### 2. マスタ設定（マスタ設定タブ）
@@ -185,9 +186,9 @@ onInquiryLinkProgress(callback) → void  // IPC イベントリスナー (inqui
 **セクション2: 問い合わせ番号連携**
 - セクション1で作成したCSVを読み込む
 - 確認ダイアログ後、`inquiry-linking.js` の `runLinking()` がネクストエンジンへ一括更新
-- 氏名で伝票を検索（既存の4条件 + `receive_order_consignee_name-eq`）
-- 楽観的ロック（`receive_order_last_modified_date`）付きで `receive_order_delivery_cut_form_id` を更新
-- 見つからない場合はエラーとしてスキップし次へ続行
+- `fetchOrderNameMap()` で全ユニーク氏名を1回のAPI呼び出し（`receive_order_consignee_name-in`）で一括取得し、ローカルでMap化
+- ローカルMapから氏名で照合し、楽観的ロック（`receive_order_last_modified_date`）付きで `receive_order_delivery_cut_form_id` を更新
+- 同名伝票が複数あれば全件更新。見つからない場合はエラーとしてスキップし次へ続行
 
 ### 6. ログ出力（ログ出力タブ）
 
@@ -236,6 +237,14 @@ mainWindow.webContents.openDevTools();
 ### 自動化モジュールのレイジーロード
 
 `ClickPostAutomation` と `InquiryAutomation` クラスは、各 IPC ハンドラー内で初回呼び出し時に `require()` される（アプリ起動時ではない）。セレクターJSONが読み込めない場合はクラスのコンストラクタで例外が発生する。
+
+### NEAPIの同期モード
+
+`callApi()` は常に `wait_flag: '1'` を送信する（NE APIの同期実行モード）。非同期モードへの変更が必要な場合はここを修正する。
+
+### parseLinkCsvの制限
+
+`inquiry-linking.js` の `parseLinkCsv` は単純な `split(',')` でCSVをパースするため、フィールド内にカンマが含まれると壊れる。`main.js` の RFC 4180 準拠 `parseCSVRow` とは異なる。問い合わせCSVはアプリ自身が生成するため通常は問題ない（氏名にカンマが含まれる場合は要注意）。
 
 ### セレクターの調整
 
