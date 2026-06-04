@@ -186,41 +186,60 @@ class ClickPostAutomation {
       // ========== Phase 3: 決済処理 ==========
       let successCount = 0;
       let errorCount = 0;
+      let consecutiveErrors = 0;
+      const MAX_CONSECUTIVE_ERRORS = 3;
 
-      for (let i = 0; i < total; i++) {
-        if (this.isStopped) {
-          this.sendProgress(i, total, '処理が停止されました', 'error');
+      while (!this.isStopped) {
+        await this.page.waitForLoadState('networkidle');
+
+        // 決済ボタンが現れるまで最大15秒待機、現れなければ全件完了とみなす
+        try {
+          await this.waitForSelectorMulti(this.selectors.paymentList.yahooWalletButton, 15000);
+        } catch {
           break;
         }
 
+        // 残りの決済ボタン数でループ終了・現在の件番号を判定
+        // 成功するとボタンが消えるため、total - 残数 + 1 が現在処理中の件番号になる
+        const buttons = await this.page.$$(this.selectors.paymentList.yahooWalletButton);
+
+        const currentItem = total - buttons.length + 1;
+
         try {
-          await this.processPayment(i + 1, total);
-          const name = csvData[i]['お届け先氏名'] || csvData[i]['氏名'] || '';
-          this.sendProgress(i + 1, total, `${i + 1}件目: ${name}の決済が完了しました`, 'success');
+          await this.processPayment(currentItem, total);
+          this.sendProgress(currentItem, total, `${currentItem}件目: 決済が完了しました`, 'success');
           successCount++;
+          consecutiveErrors = 0;
           this.currentPaymentUrl = null;
+
         } catch (error) {
-          this.sendProgress(i + 1, total, `${i + 1}件目: エラー - ${error.message}`, 'error');
+          this.sendProgress(currentItem, total, `${currentItem}件目: エラー - ${error.message}`, 'error');
           errorCount++;
+          consecutiveErrors++;
+
+          if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+            this.sendProgress(currentItem, total, `同一件で${MAX_CONSECUTIVE_ERRORS}回連続失敗。処理を中断します。`, 'error');
+            break;
+          }
 
           if (this.currentPaymentUrl) {
-            this.sendProgress(i + 1, total, `${i + 1}件目: ウォレットURLから再試行します...`, 'info');
+            this.sendProgress(currentItem, total, `${currentItem}件目: ウォレットURLから再試行します...`, 'info');
             try {
               await this.page.goto(this.currentPaymentUrl);
               await this.page.waitForLoadState('networkidle');
-              await this.executePaymentFlow(i + 1, total);
-              const name = csvData[i]['お届け先氏名'] || csvData[i]['氏名'] || '';
-              this.sendProgress(i + 1, total, `${i + 1}件目: ${name}の決済が完了しました（再試行）`, 'success');
+              await this.executePaymentFlow(currentItem, total);
+              this.sendProgress(currentItem, total, `${currentItem}件目: 決済が完了しました（再試行）`, 'success');
               errorCount--;
               successCount++;
+              consecutiveErrors = 0;
             } catch (retryError) {
-              this.sendProgress(i + 1, total, `${i + 1}件目: 再試行失敗 - ${retryError.message}`, 'error');
-              await this.navigateToPaymentList(i + 1, total);
-              this.sendProgress(i + 1, total, '決済一覧に戻りました。次の件を処理します...', 'info');
+              this.sendProgress(currentItem, total, `${currentItem}件目: 再試行失敗 - ${retryError.message}`, 'error');
+              await this.navigateToPaymentList(currentItem, total);
+              this.sendProgress(currentItem, total, '決済一覧に戻りました。次の件を処理します...', 'info');
             }
           } else {
-            await this.navigateToPaymentList(i + 1, total);
-            this.sendProgress(i + 1, total, '決済一覧に戻りました。次の件を処理します...', 'info');
+            await this.navigateToPaymentList(currentItem, total);
+            this.sendProgress(currentItem, total, '決済一覧に戻りました。次の件を処理します...', 'info');
           }
 
           this.currentPaymentUrl = null;
