@@ -274,3 +274,4 @@ mainWindow.webContents.openDevTools();
 - **productName**: `NextEngineCSV`
 - **出力先**: `dist/`
 - **ターゲット**: Windows Portable (x64 + ia32)
+
