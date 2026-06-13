@@ -363,6 +363,7 @@ async function fetchOrdersWithDetails(conditions = {}) {
         shipName: order.receive_order_consignee_name,
         postalCode: order.receive_order_consignee_zip_code,
         address: (order.receive_order_consignee_address1 || '') + (order.receive_order_consignee_address2 || ''),
+        tel: order.receive_order_consignee_tel,
         productCode: '',
         productName: '',
         quantity: 0
@@ -374,6 +375,7 @@ async function fetchOrdersWithDetails(conditions = {}) {
           shipName: order.receive_order_consignee_name,
           postalCode: order.receive_order_consignee_zip_code,
           address: (order.receive_order_consignee_address1 || '') + (order.receive_order_consignee_address2 || ''),
+          tel: order.receive_order_consignee_tel,
           productCode: row.receive_order_row_goods_id,
           productName: row.receive_order_row_goods_name,
           quantity: row.receive_order_row_quantity

@@ -217,6 +217,11 @@ function initSearchFeature() {
   // CSV出力ボタン
   btnCsvExport.addEventListener('click', exportCsv);
 
+  // CSV形式選択モーダルのボタン
+  document.getElementById('btn-export-japan-post').addEventListener('click', doExportJapanPost);
+  document.getElementById('btn-export-yamato').addEventListener('click', doExportYamato);
+  document.getElementById('btn-export-cancel').addEventListener('click', closeCsvFormatModal);
+
   // 全選択チェックボックス（テーブルヘッダー）
   chkSelectAll.addEventListener('change', toggleSelectAll);
 
@@ -342,7 +347,9 @@ function splitAddress(address, maxLength = 20) {
   return lines.slice(0, 4); // 最大4行まで
 }
 
-// CSV出力
+// CSV出力 — 形式選択モーダルを表示してから各形式の処理に渡す
+let pendingExportData = null;
+
 async function exportCsv() {
   const checkboxes = document.querySelectorAll('.row-checkbox:checked');
 
@@ -375,14 +382,30 @@ async function exportCsv() {
     nameCount[row.shipName] = (nameCount[row.shipName] || 0) + 1;
   });
 
-  // 3.5. 伝票番号順に戻す
+  // 4. 伝票番号順に戻す
   expandedRows.sort((a, b) => {
     if (a.slipNo < b.slipNo) return -1;
     if (a.slipNo > b.slipNo) return 1;
     return 0;
   });
 
-  // 4. CSV行を生成（出現回数2以上なら◎をつける）
+  // モーダルに渡してユーザーに形式を選ばせる
+  pendingExportData = { expandedRows, nameCount, selectedData };
+  const modal = document.getElementById('modal-csv-format');
+  modal.style.display = 'flex';
+}
+
+function closeCsvFormatModal() {
+  const modal = document.getElementById('modal-csv-format');
+  modal.style.display = 'none';
+  pendingExportData = null;
+}
+
+// 日本郵便形式で出力（既存の動作）
+async function doExportJapanPost() {
+  const { expandedRows, nameCount, selectedData } = pendingExportData;
+  closeCsvFormatModal();
+
   const headers = ['お届け先郵便番号', 'お届け先氏名', 'お届け先敬称', 'お届け先住所1行目', 'お届け先住所2行目', 'お届け先住所3行目', 'お届け先住所4行目', '内容品', '重複'];
 
   const rows = expandedRows.map(item => {
@@ -404,36 +427,65 @@ async function exportCsv() {
 
   const MAX_ROWS_PER_FILE = 40;
 
-  // 40行以下の場合は単一ファイル保存
   if (rows.length <= MAX_ROWS_PER_FILE) {
     const csvContent = [headers.join(','), ...rows].join('\n');
     const result = await window.electronAPI.saveCsv(csvContent);
 
     if (result.success) {
       alert(`${expandedRows.length}件のデータをCSV出力しました（元データ: ${selectedData.length}件）\n\n保存先: ${result.filePath}`);
-    } else if (result.canceled) {
-      // キャンセルされた場合は何もしない
-    } else {
+    } else if (!result.canceled) {
       alert('CSV保存に失敗しました: ' + (result.error || '不明なエラー'));
     }
     return;
   }
 
-  // 41行以上の場合は分割保存
   const csvContents = [];
   for (let i = 0; i < rows.length; i += MAX_ROWS_PER_FILE) {
     const chunk = rows.slice(i, i + MAX_ROWS_PER_FILE);
-    const csvContent = [headers.join(','), ...chunk].join('\n');
-    csvContents.push(csvContent);
+    csvContents.push([headers.join(','), ...chunk].join('\n'));
   }
 
   const result = await window.electronAPI.saveCsvMultiple(csvContents);
 
   if (result.success) {
     alert(`${result.fileCount}ファイルに分割して出力しました（計${expandedRows.length}件、元データ: ${selectedData.length}件）\n\n保存先: ${result.filePaths[0]} など`);
-  } else if (result.canceled) {
-    // キャンセルされた場合は何もしない
-  } else {
+  } else if (!result.canceled) {
+    alert('CSV保存に失敗しました: ' + (result.error || '不明なエラー'));
+  }
+}
+
+// ヤマト運輸形式で出力（送り状種別・電話番号を追加、分割なし）
+async function doExportYamato() {
+  const { expandedRows, nameCount, selectedData } = pendingExportData;
+  closeCsvFormatModal();
+
+  const headers = ['お届け先郵便番号', 'お届け先氏名', 'お届け先敬称', 'お届け先住所1行目', 'お届け先住所2行目', 'お届け先住所3行目', 'お届け先住所4行目', '内容品', '送り状種別', '電話番号', '重複'];
+
+  const rows = expandedRows.map(item => {
+    const addressLines = splitAddress(item.address, 20);
+    const isDuplicate = nameCount[item.shipName] >= 2;
+
+    return [
+      item.postalCode,
+      item.shipName,
+      '様',
+      addressLines[0],
+      addressLines[1],
+      addressLines[2],
+      addressLines[3],
+      item.productName,
+      'A',
+      item.tel || '',
+      isDuplicate ? '◎' : ''
+    ].map(field => `"${field}"`).join(',');
+  });
+
+  const csvContent = [headers.join(','), ...rows].join('\n');
+  const result = await window.electronAPI.saveCsv(csvContent);
+
+  if (result.success) {
+    alert(`${expandedRows.length}件のデータをCSV出力しました（ヤマト運輸形式、元データ: ${selectedData.length}件）\n\n保存先: ${result.filePath}`);
+  } else if (!result.canceled) {
     alert('CSV保存に失敗しました: ' + (result.error || '不明なエラー'));
   }
 }
