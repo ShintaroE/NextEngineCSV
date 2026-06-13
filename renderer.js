@@ -294,7 +294,7 @@ function renderSearchResults(results) {
 
   if (results.length === 0) {
     countBar.style.display = 'none';
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #999;">該当するデータがありません</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: #999;">該当するデータがありません</td></tr>';
     return;
   }
 
@@ -314,6 +314,7 @@ function renderSearchResults(results) {
       <td>${item.quantity}</td>
       <td>${escapeHtml(item.shipName)}</td>
       <td>${escapeHtml(item.postalCode)}</td>
+      <td>${escapeHtml(item.tel || '')}</td>
       <td>${escapeHtml(item.address)}</td>
     </tr>
   `).join('');
