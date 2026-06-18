@@ -460,7 +460,7 @@ async function doExportYamato() {
   const { expandedRows, nameCount, selectedData } = pendingExportData;
   closeCsvFormatModal();
 
-  const headers = ['お届け先郵便番号', 'お届け先氏名', 'お届け先敬称', 'お届け先住所1行目', 'お届け先住所2行目', 'お届け先住所3行目', 'お届け先住所4行目', '内容品', '送り状種別', '電話番号', '重複'];
+  const headers = ['お届け先郵便番号', 'お届け先氏名', 'お届け先敬称', 'お届け先住所1行目', 'お届け先住所2行目', 'お届け先住所3行目', 'お届け先住所4行目', '内容品', '伝票番号', '送り状種別', '電話番号', '重複'];
 
   const rows = expandedRows.map(item => {
     const addressLines = splitAddress(item.address, 20);
@@ -475,6 +475,7 @@ async function doExportYamato() {
       addressLines[2],
       addressLines[3],
       item.productName,
+      item.slipNo,
       'A',
       item.tel || '',
       isDuplicate ? '◎' : ''
